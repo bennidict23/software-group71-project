@@ -15,12 +15,12 @@ import org.jfree.data.general.DefaultPieDataset;
 /**
  * Main application frame for the AI Finance Tracker.
  */
-public class FinanceTracker extends JFrame {
+public class FinanceTrack extends JFrame {
     private final TransactionTableModel model = new TransactionTableModel();
     private final JTable table = new JTable(model);
     private final JFileChooser fileChooser = new JFileChooser();
 
-    public FinanceTracker() {
+    public FinanceTrack() {
         setTitle("AI Finance Tracker");
         setSize(800, 600);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -186,7 +186,6 @@ public class FinanceTracker extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new FinanceTracker().setVisible(true));
+        SwingUtilities.invokeLater(() -> new FinanceTrack().setVisible(true));
     }
 }
-
