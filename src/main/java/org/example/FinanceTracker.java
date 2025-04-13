@@ -1,97 +1,31 @@
 package org.example;
 
-// File: FinanceTracker.java
 import javax.swing.*;
-import javax.swing.table.AbstractTableModel;
 import java.awt.*;
-import java.awt.event.*;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDate;
-import java.util.*;
-import java.util.List;
 import java.util.stream.Collectors;
-
-import org.jfree.chart.*;
-import org.jfree.chart.plot.PiePlot;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartFrame;
+import org.jfree.chart.JFreeChart;
 import org.jfree.data.general.DefaultPieDataset;
 
-// Transaction数据模型
-class Transaction {
-    LocalDate date;
-    double amount;
-    String category;
-    String description;
-
-    public Transaction(LocalDate date, double amount, String description) {
-        this.date = date;
-        this.amount = amount;
-        this.description = description;
-        this.category = "Uncategorized";
-    }
-}
-
-// 自定义Table Model
-class TransactionTableModel extends AbstractTableModel {
-    private final List<Transaction> transactions = new ArrayList<>();
-    private final String[] COLUMNS = {"Date", "Amount", "Category", "Description"};
-
-    @Override
-    public int getRowCount() { return transactions.size(); }
-
-    @Override
-    public int getColumnCount() { return COLUMNS.length; }
-
-    @Override
-    public String getColumnName(int column) { return COLUMNS[column]; }
-
-    @Override
-    public Object getValueAt(int row, int column) {
-        Transaction t = transactions.get(row);
-        return switch (column) {
-            case 0 -> t.date;
-            case 1 -> String.format("¥%.2f", t.amount);
-            case 2 -> t.category;
-            case 3 -> t.description;
-            default -> null;
-        };
-    }
-
-    @Override
-    public boolean isCellEditable(int row, int column) {
-        return column == 2; // 只允许编辑Category列
-    }
-
-    @Override
-    public void setValueAt(Object value, int row, int column) {
-        if (column == 2) {
-            transactions.get(row).category = (String) value;
-            fireTableCellUpdated(row, column);
-        }
-    }
-
-    public void addTransaction(Transaction t) {
-        transactions.add(t);
-        fireTableRowsInserted(transactions.size()-1, transactions.size()-1);
-    }
-
-    public List<Transaction> getTransactions() { return transactions; }
-}
-
-// 主界面
+/**
+ * Main application frame for the AI Finance Tracker.
+ */
 public class FinanceTracker extends JFrame {
     private final TransactionTableModel model = new TransactionTableModel();
     private final JTable table = new JTable(model);
     private final JFileChooser fileChooser = new JFileChooser();
 
     public FinanceTracker() {
-        // 初始化界面
         setTitle("AI Finance Tracker");
         setSize(800, 600);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
-        // 菜单栏
+        // 创建菜单栏及菜单项
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
         JMenuItem importItem = new JMenuItem("Import CSV");
@@ -109,22 +43,21 @@ public class FinanceTracker extends JFrame {
         menuBar.add(fileMenu);
         setJMenuBar(menuBar);
 
-        // 工具栏
+        // 创建工具栏
         JPanel toolbar = new JPanel();
         JButton addButton = new JButton("Add Transaction");
         JButton chartButton = new JButton("Show Chart");
 
         addButton.addActionListener(e -> showAddDialog());
         chartButton.addActionListener(e -> showChart());
-
         toolbar.add(addButton);
         toolbar.add(chartButton);
 
-        // 主布局
+        // 主界面布局
         add(toolbar, BorderLayout.NORTH);
         add(new JScrollPane(table), BorderLayout.CENTER);
 
-        // 加载初始数据
+        // 加载已有数据
         loadData();
     }
 
@@ -146,6 +79,10 @@ public class FinanceTracker extends JFrame {
         panel.add(new JLabel());
         panel.add(saveButton);
 
+        dialog.add(panel);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+
         saveButton.addActionListener(e -> {
             try {
                 LocalDate date = LocalDate.parse(dateField.getText());
@@ -159,13 +96,11 @@ public class FinanceTracker extends JFrame {
             }
         });
 
-        dialog.add(panel);
-        dialog.pack();
         dialog.setVisible(true);
     }
 
     private void predictCategory(Transaction t) {
-        // 基于关键词的简单AI分类
+        // 基于关键字的简单 AI 分类逻辑
         String desc = t.description.toLowerCase();
         if (desc.contains("restaurant") || desc.contains("coffee")) {
             t.category = "Food";
@@ -195,7 +130,7 @@ public class FinanceTracker extends JFrame {
                                 model.addTransaction(t);
                             }
                         });
-            } catch (IOException e) {
+            } catch (Exception e) {
                 JOptionPane.showMessageDialog(this, "Error reading file");
             }
         }
@@ -214,7 +149,7 @@ public class FinanceTracker extends JFrame {
     }
 
     private void loadData() {
-        if (new File("transactions.csv").exists()) {
+        if (new java.io.File("transactions.csv").exists()) {
             try {
                 Files.lines(Paths.get("transactions.csv"))
                         .skip(1)
@@ -230,7 +165,7 @@ public class FinanceTracker extends JFrame {
                                 model.addTransaction(t);
                             }
                         });
-            } catch (IOException e) {
+            } catch (Exception e) {
                 JOptionPane.showMessageDialog(this, "Error loading data");
             }
         }
@@ -245,7 +180,6 @@ public class FinanceTracker extends JFrame {
 
         JFreeChart chart = ChartFactory.createPieChart(
                 "Spending Analysis", dataset, true, true, false);
-
         ChartFrame frame = new ChartFrame("Chart", chart);
         frame.pack();
         frame.setVisible(true);
@@ -255,3 +189,4 @@ public class FinanceTracker extends JFrame {
         SwingUtilities.invokeLater(() -> new FinanceTracker().setVisible(true));
     }
 }
+
