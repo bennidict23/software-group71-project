@@ -16,5 +16,11 @@ public class User {
     public String getPassword() {
         return password;
     }
+
+    // 添加修改密码的方法
+    public void setPassword(String password) {
+        this.password = password;
+    }
 }
+
 
