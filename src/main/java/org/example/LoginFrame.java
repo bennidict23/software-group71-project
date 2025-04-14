@@ -1,68 +1,102 @@
 package org.example;
 
-import javax.swing.*;
-import java.awt.*;
+import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.GridPane;
+import javafx.scene.text.Font;
+import javafx.stage.Stage;
 
-public class LoginFrame extends JFrame {
-    private JTextField usernameField;
-    private JPasswordField passwordField;
-    private UserManager userManager;
+public class LoginFrame extends Application {
 
-    public LoginFrame() {
-        super("Login");
-        userManager = new UserManager();
+    private UserManager userManager = new UserManager();
 
-        setSize(300, 200);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
+    @Override
+    public void start(Stage primaryStage) {
+        primaryStage.setTitle("Login");
 
-        initComponents();
-    }
+        GridPane grid = new GridPane();
+        grid.setAlignment(Pos.CENTER);
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(25, 25, 25, 25));
 
-    private void initComponents() {
-        JPanel panel = new JPanel(new GridLayout(3, 2, 10, 10));
+        Label usernameLabel = new Label("Username:");
+        usernameLabel.setFont(new Font("Arial",16));
+        grid.add(usernameLabel, 0, 1);
+        TextField usernameField = new TextField();
+        usernameField.setFont(new Font("Arial",16));
+        grid.add(usernameField, 1, 1);
 
-        JLabel userLabel = new JLabel("Username:");
-        usernameField = new JTextField();
+        Label passwordLabel = new Label("Password:");
+        passwordLabel.setFont(new Font("Arial",16));
+        grid.add(passwordLabel, 0, 2);
+        PasswordField passwordField = new PasswordField();
+        passwordField.setFont(new Font("Arial",16));
+        grid.add(passwordField, 1, 2);
 
-        JLabel passLabel = new JLabel("Password:");
-        passwordField = new JPasswordField();
+        Button btnLogin = new Button("Login");
+        btnLogin.setFont(new Font("Arial",16));
+        grid.add(btnLogin, 1, 3);
 
-        JButton loginButton = new JButton("Login");
-        JButton registerButton = new JButton("Register");
+        Hyperlink linkRegister = new Hyperlink("Register");
+        linkRegister.setFont(new Font("Arial",16));
+        grid.add(linkRegister, 1, 4);
 
-        panel.add(userLabel);
-        panel.add(usernameField);
-        panel.add(passLabel);
-        panel.add(passwordField);
-        panel.add(loginButton);
-        panel.add(registerButton);
+        btnLogin.setOnAction(e -> {
+            String username = usernameField.getText();
+            String password = passwordField.getText();
+            if (userManager.authenticate(username, password)) {
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Login");
+                alert.setHeaderText(null);
+                alert.setContentText("Login Successful!");
+                alert.showAndWait();
+                // 假设 authenticate 方法返回一个 User 对象，或者你可以通过 getUser(username) 获取
+                User loggedInUser = userManager.getUser(username);
+                DashboardView.setCurrentUser(loggedInUser);
+                // 获取当前登录窗口的 Stage
+                Stage loginStage = (Stage) btnLogin.getScene().getWindow();
 
-        add(panel, BorderLayout.CENTER);
+                // 启动主页面（例如 FinanceTrackerFX 是你的主界面类）
+                DashboardView mainApp = new DashboardView();
+                Stage mainStage = new Stage();
+                try {
+                    mainApp.start(mainStage);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+                // 关闭登录窗口
+                loginStage.close();
+            } else {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Login Error");
+                alert.setHeaderText(null);
+                alert.setContentText("Invalid username or password.");
+                alert.showAndWait();
+            }
+        });
 
-        loginButton.addActionListener(e -> performLogin());
-        registerButton.addActionListener(e -> openRegisterFrame());
-    }
+        linkRegister.setOnAction(e -> {
+            RegisterFrame registerView = new RegisterFrame();
+            try {
+                Stage registerStage = new Stage();
+                registerView.start(registerStage);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
 
-    private void performLogin() {
-        String username = usernameField.getText();
-        String password = new String(passwordField.getPassword());
-        if (userManager.authenticate(username, password)) {
-            JOptionPane.showMessageDialog(this, "Login successful!");
-            // 登录成功后打开主页面（例如 FinanceTracker ）
-            SwingUtilities.invokeLater(() -> new FinanceTrack().setVisible(true));
-            this.dispose();
-        } else {
-            JOptionPane.showMessageDialog(this, "Invalid username or password.", "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void openRegisterFrame() {
-        SwingUtilities.invokeLater(() -> new RegisterFrame().setVisible(true));
+        Scene scene = new Scene(grid, 525, 375);
+        primaryStage.setScene(scene);
+        primaryStage.show();
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new LoginFrame().setVisible(true));
+        launch(args);
     }
 }
+
 
