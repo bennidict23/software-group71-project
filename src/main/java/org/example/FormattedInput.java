@@ -12,7 +12,6 @@ import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.util.StringConverter;
 import javafx.util.converter.DefaultStringConverter;
 
 import java.io.*;
@@ -20,7 +19,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class FormattedInput extends Application {
@@ -50,9 +48,6 @@ public class FormattedInput extends Application {
             }
         }
 
-        public String get(int index) {
-            return properties.get(index).get();
-        }
 
         public void set(int index, String value) {
             properties.get(index).set(value);
@@ -368,10 +363,7 @@ public class FormattedInput extends Application {
                     fullRowData[3] = processedAmount;       // Amount (column 6, processed)
                     fullRowData[4] = "Uncategorized";      // Category (hardcoded)
 
-                    // Combine columns 2 and 3 as description
-                    String description = (rowData.length > 1 ? rowData[1] : "") +
-                            (rowData.length > 2 ? " " + rowData[2] : "");
-                    fullRowData[5] = description;          // Description (columns 2+3 combined)
+                    fullRowData[5] = rowData[1]+rowData[2];          // Description (columns 2+3 combined)
 
                     data.add(new ObservableStringArray(fullRowData));
                 }
