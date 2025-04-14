@@ -6,6 +6,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 public class LoginFrame extends Application {
@@ -23,19 +24,25 @@ public class LoginFrame extends Application {
         grid.setPadding(new Insets(25, 25, 25, 25));
 
         Label usernameLabel = new Label("Username:");
+        usernameLabel.setFont(new Font("Arial",16));
         grid.add(usernameLabel, 0, 1);
         TextField usernameField = new TextField();
+        usernameField.setFont(new Font("Arial",16));
         grid.add(usernameField, 1, 1);
 
         Label passwordLabel = new Label("Password:");
+        passwordLabel.setFont(new Font("Arial",16));
         grid.add(passwordLabel, 0, 2);
         PasswordField passwordField = new PasswordField();
+        passwordField.setFont(new Font("Arial",16));
         grid.add(passwordField, 1, 2);
 
         Button btnLogin = new Button("Login");
+        btnLogin.setFont(new Font("Arial",16));
         grid.add(btnLogin, 1, 3);
 
         Hyperlink linkRegister = new Hyperlink("Register");
+        linkRegister.setFont(new Font("Arial",16));
         grid.add(linkRegister, 1, 4);
 
         btnLogin.setOnAction(e -> {
@@ -82,7 +89,7 @@ public class LoginFrame extends Application {
             }
         });
 
-        Scene scene = new Scene(grid, 300, 275);
+        Scene scene = new Scene(grid, 525, 375);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
