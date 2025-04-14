@@ -91,6 +91,9 @@ public class RegisterFrame extends Application {
         alert.setContentText(message);
         alert.showAndWait();
     }
+
+    private void goToLogin(Stage stage) {
+        stage.close();
+        new LoginFrame().start(new Stage());
+    }
 }
-
-
