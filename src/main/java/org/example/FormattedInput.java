@@ -362,7 +362,6 @@ public class FormattedInput extends Application {
                     fullRowData[2] = processedDate;        // Date (column 1, processed)
                     fullRowData[3] = processedAmount;       // Amount (column 6, processed)
                     fullRowData[4] = "Uncategorized";      // Category (hardcoded)
-
                     fullRowData[5] = rowData[1]+rowData[2];          // Description (columns 2+3 combined)
 
                     data.add(new ObservableStringArray(fullRowData));
