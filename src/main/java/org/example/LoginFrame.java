@@ -47,7 +47,22 @@ public class LoginFrame extends Application {
                 alert.setHeaderText(null);
                 alert.setContentText("Login Successful!");
                 alert.showAndWait();
-                // 登录成功后可启动主界面，如 FinanceTrackerFX
+                // 假设 authenticate 方法返回一个 User 对象，或者你可以通过 getUser(username) 获取
+                User loggedInUser = userManager.getUser(username);
+                DashboardView.setCurrentUser(loggedInUser);
+                // 获取当前登录窗口的 Stage
+                Stage loginStage = (Stage) btnLogin.getScene().getWindow();
+
+                // 启动主页面（例如 FinanceTrackerFX 是你的主界面类）
+                DashboardView mainApp = new DashboardView();
+                Stage mainStage = new Stage();
+                try {
+                    mainApp.start(mainStage);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+                // 关闭登录窗口
+                loginStage.close();
             } else {
                 Alert alert = new Alert(Alert.AlertType.ERROR);
                 alert.setTitle("Login Error");
