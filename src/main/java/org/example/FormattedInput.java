@@ -192,54 +192,148 @@ public class FormattedInput extends Application {
         File file = fileChooser.showOpenDialog(stage);
         if (file != null) {
             lastSelectedFile = file;
-            data.clear();
 
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
                 String line;
                 boolean isFirstLine = true;
+                boolean isAlipayFile = false;
+                boolean isWechatFile = false;
 
-                while ((line = reader.readLine()) != null) {
-                    // 跳过第一行（标题行）
-                    if (isFirstLine) {
-                        isFirstLine = false;
-                        continue;
+                // 读取前几行，检测文件类型
+                int lineCount = 0;
+                while ((line = reader.readLine()) != null && lineCount < 5) {
+                    if (line.contains("支付宝账户") ) {
+                        isAlipayFile = true;
+                        break;
                     }
-
-                    // 解析CSV行
-                    String[] rowData = parseCsvLine(line);
-
-                    // 创建完整记录
-                    String[] fullRowData = new String[6];
-                    fullRowData[0] = "";  // 用户
-                    fullRowData[1] = "import";  // 来源
-                    fullRowData[2] = rowData.length > 0 ? rowData[0] : "";  // 日期
-                    fullRowData[3] = rowData.length > 1 ? rowData[1] : "";  // 金额
-                    fullRowData[4] = rowData.length > 2 ? rowData[2] : "";  // 类别
-                    fullRowData[5] = rowData.length > 3 ? rowData[3] : "";  // 描述
-
-                    data.add(fullRowData);
-                    System.out.println("导入记录: " + Arrays.toString(fullRowData));
+                    if (line.contains("微信支付账单明细")) {
+                        isWechatFile = true;
+                        break;
+                    }
+                    lineCount++;
                 }
 
-                // 更新表格视图
-                updateTableView();
+                // 根据检测到的文件类型调用相应的导入方法
+                if (isAlipayFile) {
+                    importAlipay();
+                    return;
+                } else if (isWechatFile) {
+                   // importWechat();
+                    return;
+                }
 
-                // 保存数据
-                saveToTransactionCSV();
+                // 如果不是特殊格式，按常规CSV处理
+                data.clear();
+                reader.close();
 
-                // 显示导入成功消息
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("导入成功");
-                alert.setHeaderText(null);
-                alert.setContentText("成功从 " + file.getName() + " 导入了 " + data.size() + " 条记录");
-                alert.showAndWait();
+                // 重新打开文件从头开始读取
+                try (BufferedReader reReader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
+                    isFirstLine = true;
+                    while ((line = reReader.readLine()) != null) {
+                        // 跳过第一行（标题行）
+                        if (isFirstLine) {
+                            isFirstLine = false;
+                            continue;
+                        }
 
+                        // 解析CSV行
+                        String[] rowData = parseCsvLine(line);
+
+                        // 创建完整记录
+                        String[] fullRowData = new String[6];
+                        fullRowData[0] = "";  // 用户
+                        fullRowData[1] = "import";  // 来源
+                        fullRowData[2] = rowData.length > 0 ? rowData[0] : "";  // 日期
+                        fullRowData[3] = rowData.length > 1 ? rowData[1] : "";  // 金额
+                        fullRowData[4] = rowData.length > 2 ? rowData[2] : "";  // 类别
+                        fullRowData[5] = rowData.length > 3 ? rowData[3] : "";  // 描述
+
+                        data.add(fullRowData);
+                        System.out.println("导入记录: " + Arrays.toString(fullRowData));
+                    }
+
+                    // 更新表格视图
+                    updateTableView();
+
+                    // 保存数据
+                    saveToTransactionCSV();
+
+                    // 显示导入成功消息
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("导入成功");
+                    alert.setHeaderText(null);
+                    alert.setContentText("成功从 " + file.getName() + " 导入了 " + data.size() + " 条记录");
+                    alert.showAndWait();
+                }
             } catch (IOException e) {
                 showErrorAlert("导入错误", "无法导入CSV文件: " + e.getMessage());
             }
         }
     }
+    private void importAlipay() {
+        data.clear();
 
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(lastSelectedFile), StandardCharsets.UTF_8))) {
+            String line;
+            int lineCount = 0;
+
+            // 跳过前25行
+            while (lineCount < 25 && (line = reader.readLine()) != null) {
+                lineCount++;
+            }
+
+            // 从第26行开始处理数据
+            while ((line = reader.readLine()) != null) {
+                String[] rowData = parseCsvLine(line);
+
+                // 确保有足够的列数
+                if (rowData.length >= 7) {
+                    // 创建完整记录
+                    String[] fullRowData = new String[6];
+
+                    // 处理日期 - 将第1列的交易时间精确到日
+                    String rawDate = rowData[0];
+                    String processedDate = processDate(rawDate);
+
+                    fullRowData[0] = "默认用户";              // 用户（写死）
+                    fullRowData[1] = "alipay";              // 来源
+                    fullRowData[2] = processedDate;         // 日期（第1列，处理后）
+                    fullRowData[3] = rowData[6];            // 金额（第7列）
+                    fullRowData[4] = "未分类";               // 类别（写死为"未分类"）
+                    fullRowData[5] = rowData[4];            // 描述（第5列商品说明）
+
+                    data.add(fullRowData);
+                    System.out.println("导入支付宝记录: " + Arrays.toString(fullRowData));
+                }
+            }
+
+            // 更新表格视图
+            updateTableView();
+
+            // 保存数据
+            saveToTransactionCSV();
+
+            // 显示导入成功消息
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("导入成功");
+            alert.setHeaderText(null);
+            alert.setContentText("成功从支付宝账单导入了 " + data.size() + " 条记录");
+            alert.showAndWait();
+
+        } catch (IOException e) {
+            showErrorAlert("导入错误", "无法导入支付宝CSV文件: " + e.getMessage());
+        }
+    }
+
+    // 处理日期格式，将支付宝交易时间精确到日
+    private String processDate(String rawDate) {
+        // 支付宝的交易时间格式可能是"2023-10-15 14:30:25"
+        // 我们需要将其精确到日，即"2023-10-15"
+        if (rawDate != null && rawDate.length() >= 10) {
+            return rawDate.substring(0, 10);
+        }
+        return rawDate;
+    }
     private void downloadTemplate(Stage stage) {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("保存CSV模板");
