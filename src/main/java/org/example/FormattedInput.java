@@ -1,13 +1,19 @@
 package org.example;
 
 import javafx.application.Application;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.util.StringConverter;
+import javafx.util.converter.DefaultStringConverter;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -19,8 +25,8 @@ import java.util.List;
 
 public class FormattedInput extends Application {
 
-    private TableView<String[]> tableView;
-    private final List<String[]> data = new ArrayList<>();
+    private TableView<ObservableStringArray> tableView;
+    private final ObservableList<ObservableStringArray> data = FXCollections.observableArrayList();
     private File lastSelectedFile;
 
     // Form controls
@@ -31,7 +37,38 @@ public class FormattedInput extends Application {
 
     public static void main(String[] args) {
         launch(args);
+    }
 
+    // Wrapper class to make String[] observable
+    public static class ObservableStringArray {
+        private final ObservableList<SimpleStringProperty> properties;
+
+        public ObservableStringArray(String[] values) {
+            this.properties = FXCollections.observableArrayList();
+            for (String value : values) {
+                properties.add(new SimpleStringProperty(value));
+            }
+        }
+
+        public String get(int index) {
+            return properties.get(index).get();
+        }
+
+        public void set(int index, String value) {
+            properties.get(index).set(value);
+        }
+
+        public SimpleStringProperty getProperty(int index) {
+            return properties.get(index);
+        }
+
+        public String[] toArray() {
+            String[] array = new String[properties.size()];
+            for (int i = 0; i < array.length; i++) {
+                array[i] = properties.get(i).get();
+            }
+            return array;
+        }
     }
 
     @Override
@@ -49,7 +86,13 @@ public class FormattedInput extends Application {
         Button templateButton = new Button("Download CSV Template");
         templateButton.setOnAction(e -> downloadTemplate(primaryStage));
 
-        HBox buttonBox = new HBox(20, importButton, templateButton);
+        Button saveButton = new Button("Save Changes");
+        saveButton.setOnAction(e -> saveToTransactionCSV());
+
+        Button deleteButton = new Button("Delete Selected");
+        deleteButton.setOnAction(e -> deleteSelectedRows());
+
+        HBox buttonBox = new HBox(10, importButton, templateButton, saveButton, deleteButton);
 
         // Create table view
         tableView = createTableView();
@@ -64,13 +107,12 @@ public class FormattedInput extends Application {
         mainLayout.getChildren().addAll(buttonBox, tableView, formBox, statusLabel);
 
         // Create scene
-        Scene scene = new Scene(mainLayout, 900, 700);
+        Scene scene = new Scene(mainLayout, 1000, 800);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
 
     private VBox createAddRecordForm() {
-
         VBox formBox = new VBox(10);
         formBox.setPadding(new Insets(15));
         formBox.setStyle("-fx-border-color: #cccccc; -fx-border-radius: 5;");
@@ -116,26 +158,33 @@ public class FormattedInput extends Application {
         return formBox;
     }
 
-    private TableView<String[]> createTableView() {
-        TableView<String[]> table = new TableView<>();
+    private TableView<ObservableStringArray> createTableView() {
+        TableView<ObservableStringArray> table = new TableView<>();
+        table.setEditable(true);
 
         // Create table columns
         String[] headers = {"User", "Source", "Date", "Amount", "Category", "Description"};
         for (int i = 0; i < headers.length; i++) {
             final int columnIndex = i;
-            TableColumn<String[], String> column = new TableColumn<>(headers[i]);
-            column.setCellValueFactory(cellData -> {
-                String[] row = cellData.getValue();
-                if (row != null && columnIndex < row.length) {
-                    return javafx.beans.binding.Bindings.createStringBinding(() -> row[columnIndex]);
-                } else {
-                    return javafx.beans.binding.Bindings.createStringBinding(() -> "");
-                }
+            TableColumn<ObservableStringArray, String> column = new TableColumn<>(headers[i]);
+
+            // Set cell value factory
+            column.setCellValueFactory(cellData -> cellData.getValue().getProperty(columnIndex));
+
+            // Make cells editable
+            column.setCellFactory(TextFieldTableCell.forTableColumn(new DefaultStringConverter()));
+
+            // Handle edit commits
+            column.setOnEditCommit(event -> {
+                ObservableStringArray row = event.getRowValue();
+                row.set(columnIndex, event.getNewValue());
             });
-            column.setPrefWidth(120);
+
+            column.setPrefWidth(150);
             table.getColumns().add(column);
         }
 
+        table.setItems(data);
         return table;
     }
 
@@ -165,13 +214,7 @@ public class FormattedInput extends Application {
             record[5] = descriptionField.getText().trim();
 
             // Add to data list
-            data.add(record);
-
-            // Update table view
-            updateTableView();
-
-            // Save data
-            saveToTransactionCSV();
+            data.add(new ObservableStringArray(record));
 
             // Clear form
             datePicker.setValue(LocalDate.now());
@@ -182,6 +225,16 @@ public class FormattedInput extends Application {
         } catch (Exception e) {
             showErrorAlert("Add Record Error", "Failed to add record: " + e.getMessage());
         }
+    }
+
+    private void deleteSelectedRows() {
+        ObservableList<ObservableStringArray> selectedRows = tableView.getSelectionModel().getSelectedItems();
+        if (selectedRows.isEmpty()) {
+            showErrorAlert("Delete Error", "No rows selected for deletion");
+            return;
+        }
+
+        data.removeAll(selectedRows);
     }
 
     private void importCSV(Stage stage) {
@@ -271,11 +324,8 @@ public class FormattedInput extends Application {
                 record[4] = rowData.length > 2 ? rowData[2] : "Uncategorized"; // Category
                 record[5] = rowData.length > 3 ? rowData[3] : ""; // Description
 
-                data.add(record);
+                data.add(new ObservableStringArray(record));
             }
-
-            updateTableView();
-            saveToTransactionCSV();
 
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Import Successful");
@@ -323,13 +373,9 @@ public class FormattedInput extends Application {
                             (rowData.length > 2 ? " " + rowData[2] : "");
                     fullRowData[5] = description;          // Description (columns 2+3 combined)
 
-                    data.add(fullRowData);
-                    System.out.println("Imported WeChat record: " + Arrays.toString(fullRowData));
+                    data.add(new ObservableStringArray(fullRowData));
                 }
             }
-
-            updateTableView();
-            saveToTransactionCSV();
 
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Import Successful");
@@ -343,7 +389,6 @@ public class FormattedInput extends Application {
     }
 
     private void importAlipayWithEncoding(String encoding) {
-        System.out.println(encoding);
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(lastSelectedFile), encoding))) {
             data.clear();
             String line;
@@ -372,13 +417,9 @@ public class FormattedInput extends Application {
                     fullRowData[4] = "Uncategorized";     // Category (hardcoded)
                     fullRowData[5] = rowData[1] + rowData[4]; // Description (columns 2+5 combined)
 
-                    data.add(fullRowData);
-                    System.out.println("Imported Alipay record: " + Arrays.toString(fullRowData));
+                    data.add(new ObservableStringArray(fullRowData));
                 }
             }
-
-            updateTableView();
-            saveToTransactionCSV();
 
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Import Successful");
@@ -476,17 +517,12 @@ public class FormattedInput extends Application {
         return tokens.toArray(new String[0]);
     }
 
-    private void updateTableView() {
-        tableView.getItems().clear();
-        tableView.getItems().addAll(data);
-    }
-
     private void saveToTransactionCSV() {
         try {
             System.out.println("\n=== Data to be saved ===");
             System.out.println("Total records: " + data.size());
             for (int i = 0; i < data.size(); i++) {
-                String[] record = data.get(i);
+                String[] record = data.get(i).toArray();
                 System.out.printf("%d: [Source: %s, Date: %s, Amount: %s, Category: %s, Description: %s]%n",
                         i + 1,
                         record[1],
@@ -498,37 +534,43 @@ public class FormattedInput extends Application {
             System.out.println("===================\n");
 
             File file = new File("transactions.csv");
-            boolean fileExists = file.exists();
 
-            try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
-                    new FileOutputStream(file, true), StandardCharsets.UTF_8))) {
+            try (BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
 
-                if (!fileExists) {
-                    writer.write("User,Source,Date,Amount,Category,Description");
-                    writer.newLine();
-                }
+                // Always write header
+                writer.write("User,Source,Date,Amount,Category,Description");
+                writer.newLine();
 
-                for (String[] row : data) {
+                for (ObservableStringArray row : data) {
+                    String[] record = row.toArray();
                     StringBuilder sb = new StringBuilder();
-                    for (int i = 0; i < row.length; i++) {
-                        String field = row[i];
+                    for (int i = 0; i < record.length; i++) {
+                        String field = record[i];
                         if (field.contains(",") || field.contains("\"") || field.contains("\n")) {
                             sb.append("\"").append(field.replace("\"", "\"\"")).append("\"");
                         } else {
                             sb.append(field);
                         }
 
-                        if (i < row.length - 1) {
+                        if (i < record.length - 1) {
                             sb.append(",");
                         }
                     }
                     writer.write(sb.toString());
                     writer.newLine();
                 }
-            }
-            System.out.println("Data successfully appended to: " + file.getAbsolutePath());
 
-        } catch (IOException e) {
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Save Successful");
+                alert.setHeaderText(null);
+                alert.setContentText("Data successfully saved to: " + file.getAbsolutePath());
+                alert.showAndWait();
+
+            } catch (IOException e) {
+                showErrorAlert("Save Error", "Failed to save data: " + e.getMessage());
+            }
+        } catch (Exception e) {
             showErrorAlert("Save Error", "Failed to save data: " + e.getMessage());
         }
     }
