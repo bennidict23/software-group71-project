@@ -27,6 +27,9 @@ public class DashboardView extends Application {
     private ProgressBar progressBar;
     private Label progressLabel;
 
+    // 下拉选择框，用于页面导航
+    private ComboBox<String> pageSelector;
+
     // 登录时调用该方法设置当前用户
     public static void setCurrentUser(User user) {
         currentUser = user;
@@ -35,6 +38,37 @@ public class DashboardView extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setTitle("User Dashboard");
+
+        // 创建页面导航下拉框，并放在顶部
+        pageSelector = new ComboBox<>();
+        pageSelector.getItems().addAll( "Formatted Input");
+        pageSelector.setPromptText("Select a page...");
+        pageSelector.setOnAction(e -> {
+            String selectedPage = pageSelector.getValue();
+            if(selectedPage == null || selectedPage.isEmpty()){
+                return;  // 没有选择时直接返回
+            }
+            if ("Formatted Input".equals(selectedPage)) {
+                // 打开 FormattedInput 页面（假设已实现 FormattedInput 类）
+                FormattedInput formattedInput = new FormattedInput();
+                Stage formattedStage = new Stage();
+                try {
+                    formattedInput.start(formattedStage);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+//            else if ("Other Page".equals(selectedPage)) {
+//                Alert alert = new Alert(Alert.AlertType.INFORMATION, "Other Page not implemented yet.");
+//                alert.showAndWait();
+//            }
+//            // 可根据需要重新设置下拉框为当前页面
+            pageSelector.setValue("Formatted Input");
+        });
+        // 使用一个 HBox 来显示下拉框，并设置居中与内边距
+        HBox navigationBox = new HBox(pageSelector);
+        navigationBox.setAlignment(Pos.CENTER);
+        navigationBox.setPadding(new Insets(10));
 
         // 顶部标题
         Label titleLabel = new Label("Dashboard");
@@ -67,8 +101,12 @@ public class DashboardView extends Application {
         Button btnSetBudgetGoal = new Button("Set Budget & Goal");
         btnSetBudgetGoal.setOnAction(e -> showBudgetGoalDialog(primaryStage));
 
-        // 主布局
-        VBox mainLayout = new VBox(20, titleLabel, budgetBox, personalInfoBox, btnSetBudgetGoal);
+        // 将设置预算与目标按钮放入一个 HBox，居中显示
+        HBox optionsBox = new HBox(20, btnSetBudgetGoal);
+        optionsBox.setAlignment(Pos.CENTER);
+
+        // 主布局，将导航下拉框放在最顶端
+        VBox mainLayout = new VBox(20, navigationBox, titleLabel, budgetBox, personalInfoBox, optionsBox);
         mainLayout.setAlignment(Pos.CENTER);
         mainLayout.setPadding(new Insets(20));
 
@@ -111,10 +149,8 @@ public class DashboardView extends Application {
             } else if (!newPass.equals(confirmPass)) {
                 showAlert(Alert.AlertType.ERROR, "Error", "Passwords do not match.");
             } else {
-                // 调用 userManager 更新 CSV 文件中对应的用户密码
                 boolean syncResult = userManager.updateUserPassword(currentUser.getUsername(), newPass);
                 if (syncResult) {
-                    // 同步成功后更新当前用户对象和界面显示
                     currentUser.setPassword(newPass);
                     passwordLabel.setText("Password: " + newPass);
                     showAlert(Alert.AlertType.INFORMATION, "Success", "Password updated successfully.");
@@ -164,10 +200,8 @@ public class DashboardView extends Application {
                     showAlert(Alert.AlertType.ERROR, "Error", "Values must be positive.");
                     return;
                 }
-                // 更新变量
                 monthlyBudget = newBudget;
                 savingsGoal = newGoal;
-                // 更新界面显示：预算、目标与存钱进度
                 budgetLabel.setText("Monthly Budget: $" + monthlyBudget);
                 goalLabel.setText("Savings Goal: $" + savingsGoal);
                 progressBar.setProgress(savedAmount / savingsGoal);
@@ -194,6 +228,9 @@ public class DashboardView extends Application {
         alert.showAndWait();
     }
 }
+
+
+
 
 
 
