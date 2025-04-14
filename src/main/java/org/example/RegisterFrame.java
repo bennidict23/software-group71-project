@@ -1,75 +1,80 @@
 package org.example;
 
-import javax.swing.*;
-import java.awt.*;
+import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.GridPane;
+import javafx.stage.Stage;
 
-public class RegisterFrame extends JFrame {
-    private JTextField usernameField;
-    private JPasswordField passwordField;
-    private JPasswordField confirmPasswordField;
-    private UserManager userManager;
+public class RegisterFrame extends Application {
 
-    public RegisterFrame() {
-        super("Register");
-        userManager = new UserManager();
+    private UserManager userManager = new UserManager();
 
-        setSize(300, 250);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setLocationRelativeTo(null);
+    @Override
+    public void start(Stage stage) {
+        stage.setTitle("Register");
 
-        initComponents();
+        GridPane grid = new GridPane();
+        grid.setAlignment(Pos.CENTER);
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(25, 25, 25, 25));
+
+        Label usernameLabel = new Label("Username:");
+        grid.add(usernameLabel, 0, 1);
+        TextField usernameField = new TextField();
+        grid.add(usernameField, 1, 1);
+
+        Label passwordLabel = new Label("Password:");
+        grid.add(passwordLabel, 0, 2);
+        PasswordField passwordField = new PasswordField();
+        grid.add(passwordField, 1, 2);
+
+        Label confirmPasswordLabel = new Label("Confirm Password:");
+        grid.add(confirmPasswordLabel, 0, 3);
+        PasswordField confirmPasswordField = new PasswordField();
+        grid.add(confirmPasswordField, 1, 3);
+
+        Button btnRegister = new Button("Register");
+        grid.add(btnRegister, 1, 4);
+
+        btnRegister.setOnAction(e -> {
+            String username = usernameField.getText();
+            String password = passwordField.getText();
+            String confirmPassword = confirmPasswordField.getText();
+
+            if (username.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
+                showAlert(Alert.AlertType.ERROR, "Error", "Username and password cannot be empty.");
+                return;
+            }
+            if (!password.equals(confirmPassword)) {
+                showAlert(Alert.AlertType.ERROR, "Error", "Passwords do not match.");
+                return;
+            }
+
+            boolean success = userManager.registerUser(username, password);
+            if (success) {
+                showAlert(Alert.AlertType.INFORMATION, "Registration", "Registration successful!");
+                stage.close();
+            } else {
+                showAlert(Alert.AlertType.ERROR, "Registration Error", "Username already exists.");
+            }
+        });
+
+        Scene scene = new Scene(grid, 300, 275);
+        stage.setScene(scene);
+        stage.show();
     }
 
-    private void initComponents() {
-        JPanel panel = new JPanel(new GridLayout(4, 2, 10, 10));
-
-        JLabel userLabel = new JLabel("Username:");
-        usernameField = new JTextField();
-
-        JLabel passLabel = new JLabel("Password:");
-        passwordField = new JPasswordField();
-
-        JLabel confirmPassLabel = new JLabel("Confirm Password:");
-        confirmPasswordField = new JPasswordField();
-
-        JButton registerButton = new JButton("Register");
-
-        panel.add(userLabel);
-        panel.add(usernameField);
-        panel.add(passLabel);
-        panel.add(passwordField);
-        panel.add(confirmPassLabel);
-        panel.add(confirmPasswordField);
-        panel.add(new JLabel());
-        panel.add(registerButton);
-
-        add(panel, BorderLayout.CENTER);
-
-        registerButton.addActionListener(e -> performRegistration());
-    }
-
-    private void performRegistration() {
-        String username = usernameField.getText();
-        String password = new String(passwordField.getPassword());
-        String confirmPassword = new String(confirmPasswordField.getPassword());
-
-        if (username.isEmpty() || password.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Username and password cannot be empty.");
-            return;
-        }
-
-        if (!password.equals(confirmPassword)) {
-            JOptionPane.showMessageDialog(this, "Passwords do not match.");
-            return;
-        }
-
-        boolean success = userManager.registerUser(username, password);
-        if (success) {
-            JOptionPane.showMessageDialog(this, "Registration successful!");
-            this.dispose();
-        } else {
-            JOptionPane.showMessageDialog(this, "Username already exists.", "Error", JOptionPane.ERROR_MESSAGE);
-        }
+    private void showAlert(Alert.AlertType alertType, String title, String message){
+        Alert alert = new Alert(alertType);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }
+
 
