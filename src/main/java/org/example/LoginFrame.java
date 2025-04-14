@@ -91,5 +91,3 @@ public class LoginFrame extends Application {
         launch(args);
     }
 }
-
-
