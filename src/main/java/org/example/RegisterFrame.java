@@ -57,7 +57,7 @@ public class RegisterFrame extends Application {
             boolean success = userManager.registerUser(username, password);
             if (success) {
                 showAlert(Alert.AlertType.INFORMATION, "Registration", "Registration successful!");
-                stage.close();
+                goToLogin(stage);
             } else {
                 showAlert(Alert.AlertType.ERROR, "Registration Error", "Username already exists.");
             }
@@ -75,6 +75,9 @@ public class RegisterFrame extends Application {
         alert.setContentText(message);
         alert.showAndWait();
     }
+
+    private void goToLogin(Stage stage) {
+        stage.close();
+        new LoginFrame().start(new Stage());
+    }
 }
-
-
