@@ -5,6 +5,8 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 
@@ -41,11 +43,11 @@ public class DashboardView extends Application {
 
         // 创建页面导航下拉框，并放在顶部
         pageSelector = new ComboBox<>();
-        pageSelector.getItems().addAll( "Formatted Input");
+        pageSelector.getItems().addAll("Formatted Input");
         pageSelector.setPromptText("Select a page...");
         pageSelector.setOnAction(e -> {
             String selectedPage = pageSelector.getValue();
-            if(selectedPage == null || selectedPage.isEmpty()){
+            if (selectedPage == null || selectedPage.isEmpty()) {
                 return;  // 没有选择时直接返回
             }
             if ("Formatted Input".equals(selectedPage)) {
@@ -58,11 +60,7 @@ public class DashboardView extends Application {
                     ex.printStackTrace();
                 }
             }
-//            else if ("Other Page".equals(selectedPage)) {
-//                Alert alert = new Alert(Alert.AlertType.INFORMATION, "Other Page not implemented yet.");
-//                alert.showAndWait();
-//            }
-//            // 可根据需要重新设置下拉框为当前页面
+            // 可根据需要重新设置下拉框为当前页面
             pageSelector.setValue("Formatted Input");
         });
         // 使用一个 HBox 来显示下拉框，并设置居中与内边距
@@ -80,7 +78,7 @@ public class DashboardView extends Application {
         goalLabel = new Label("Savings Goal: $" + savingsGoal);
         // 显示存钱进度（progress = 当前存款 / 存钱目标）
         progressBar = new ProgressBar(savedAmount / savingsGoal);
-        progressLabel = new Label("Savings Progress: " + (int)(savedAmount / savingsGoal * 100)
+        progressLabel = new Label("Savings Progress: " + (int) (savedAmount / savingsGoal * 100)
                 + "% (" + savedAmount + " saved)");
         VBox budgetBox = new VBox(10, budgetLabel, goalLabel, progressBar, progressLabel);
         budgetBox.setPadding(new Insets(10));
@@ -97,6 +95,25 @@ public class DashboardView extends Application {
         personalInfoBox.setPadding(new Insets(10));
         personalInfoBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
 
+        // 预留图像位置
+        ImageView imageView = new ImageView();
+        imageView.setFitHeight(200);
+        imageView.setFitWidth(200);
+        imageView.setStyle("-fx-border-color: gray; -fx-border-radius: 5px;");
+
+        // 添加标题
+        Label imageTitleLabel = new Label("Consumer Trend");
+        imageTitleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+
+        // 将图像放入一个 VBox，并用边框框起来
+        VBox imageBox = new VBox(10,imageTitleLabel,imageView);
+        imageBox.setPadding(new Insets(10));
+        imageBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+
+        // 将用户信息和月预算存钱目标的两个框放在左侧，图像框放在右侧
+        HBox mainBox = new HBox(20, personalInfoBox, budgetBox, imageBox);
+        mainBox.setAlignment(Pos.CENTER);
+
         // 添加设置预算和目标的按钮
         Button btnSetBudgetGoal = new Button("Set Budget & Goal");
         btnSetBudgetGoal.setOnAction(e -> showBudgetGoalDialog(primaryStage));
@@ -106,11 +123,11 @@ public class DashboardView extends Application {
         optionsBox.setAlignment(Pos.CENTER);
 
         // 主布局，将导航下拉框放在最顶端
-        VBox mainLayout = new VBox(20, navigationBox, titleLabel, budgetBox, personalInfoBox, optionsBox);
+        VBox mainLayout = new VBox(20, navigationBox, titleLabel, mainBox, optionsBox);
         mainLayout.setAlignment(Pos.CENTER);
         mainLayout.setPadding(new Insets(20));
 
-        Scene scene = new Scene(mainLayout, 500, 500);
+        Scene scene = new Scene(mainLayout, 800, 600);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
@@ -205,7 +222,7 @@ public class DashboardView extends Application {
                 budgetLabel.setText("Monthly Budget: $" + monthlyBudget);
                 goalLabel.setText("Savings Goal: $" + savingsGoal);
                 progressBar.setProgress(savedAmount / savingsGoal);
-                progressLabel.setText("Savings Progress: " + (int)(savedAmount / savingsGoal * 100)
+                progressLabel.setText("Savings Progress: " + (int) (savedAmount / savingsGoal * 100)
                         + "% (" + savedAmount + " saved)");
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Budget and Goal updated.");
                 dialog.close();
@@ -228,9 +245,3 @@ public class DashboardView extends Application {
         alert.showAndWait();
     }
 }
-
-
-
-
-
-
