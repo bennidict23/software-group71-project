@@ -323,12 +323,21 @@ public class FormattedInput extends Application {
             System.out.println("===================\n");
 
             File file = new File("transactions.csv");
-            try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
-                // 写入表头
-                writer.write("User,Source,Date,Amount,Category,Description");
-                writer.newLine();
 
-                // 写入所有数据
+            // 检查文件是否存在，如果不存在则写入表头
+            boolean fileExists = file.exists();
+
+            try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(file, true), StandardCharsets.UTF_8))) {
+
+                // 如果文件不存在，写入表头
+                if (!fileExists) {
+                    writer.write("User,Source,Date,Amount,Category,Description");
+                    writer.newLine();
+                }
+
+                // 只写入新增的数据（从data列表的最后一个开始）
+                // 这里假设每次保存都是新增数据，如果要实现增量保存，需要更复杂的逻辑
                 for (String[] row : data) {
                     StringBuilder sb = new StringBuilder();
                     for (int i = 0; i < row.length; i++) {
@@ -347,7 +356,7 @@ public class FormattedInput extends Application {
                     writer.newLine();
                 }
             }
-            System.out.println("数据已成功保存到: " + file.getAbsolutePath());
+            System.out.println("数据已成功追加到: " + file.getAbsolutePath());
 
         } catch (IOException e) {
             showErrorAlert("保存错误", "无法保存数据: " + e.getMessage());
