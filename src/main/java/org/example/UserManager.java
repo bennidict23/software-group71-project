@@ -19,7 +19,7 @@ public class UserManager {
         }
     }
 
-    // 注册用户的方法（已有代码）
+    // 注册用户的方法
     public boolean registerUser(String username, String password) {
         if (getUser(username) != null) {
             return false;
@@ -51,7 +51,12 @@ public class UserManager {
         return null;
     }
 
-    // 新增方法：更新用户密码并同步到CSV文件
+    // 新增方法：重置用户密码并同步到CSV文件
+    public boolean resetPassword(String username, String newPassword) {
+        return updateUserPassword(username, newPassword);
+    }
+
+    // 更新用户密码并同步到CSV文件
     public boolean updateUserPassword(String username, String newPassword) {
         File inputFile = new File(USERS_FILE);
         File tempFile = new File("users_temp.csv");
@@ -100,7 +105,7 @@ public class UserManager {
         return updated;
     }
 
-    // 用户登录认证（已有代码）
+    // 用户登录认证
     public boolean authenticate(String username, String password) {
         User user = getUser(username);
         if (user != null) {
@@ -109,5 +114,3 @@ public class UserManager {
         return false;
     }
 }
-
-
