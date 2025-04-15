@@ -32,6 +32,9 @@ public class DashboardView extends Application {
     // 下拉选择框，用于页面导航
     private ComboBox<String> pageSelector;
 
+    // 缓存FormattedInput实例
+    private FormattedInput formattedInput = null;
+
     // 登录时调用该方法设置当前用户
     public static void setCurrentUser(User user) {
         currentUser = user;
@@ -40,6 +43,11 @@ public class DashboardView extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setTitle("User Dashboard");
+
+        // 初始化FormattedInput实例
+        if (formattedInput == null) {
+            formattedInput = new FormattedInput();
+        }
 
         // 创建页面导航下拉框，并放在顶部
         pageSelector = new ComboBox<>();
@@ -51,13 +59,14 @@ public class DashboardView extends Application {
                 return;  // 没有选择时直接返回
             }
             if ("Formatted Input".equals(selectedPage)) {
-                // 打开 FormattedInput 页面（假设已实现 FormattedInput 类）
-                FormattedInput formattedInput = new FormattedInput();
-                Stage formattedStage = new Stage();
-                try {
-                    formattedInput.start(formattedStage);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
+                // 调用FormattedInput的start方法
+                if (formattedInput != null) {
+                    try {
+                        Stage formattedStage = new Stage();
+                        formattedInput.start(formattedStage);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
                 }
             }
             // 可根据需要重新设置下拉框为当前页面
