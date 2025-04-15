@@ -206,61 +206,57 @@ public class DashboardView extends Application {
         dialog.setTitle("Set Budget & Goal");
         dialog.initOwner(owner);
 
-        // ----------------- 新增部分：年度目标进度条 -----------------
-        ProgressBar annualProgressBar = new ProgressBar(0);
+        // ----------------- 顶部：年度进度条 -----------------
+        ProgressBar annualProgressBar = new ProgressBar(annualSavedAmount / annualTarget);
         annualProgressBar.setPrefWidth(550);
-        Label annualProgressLabel = new Label("Annual Savings Progress: 0% (0 saved)");
+        int initPercent = (int)(annualSavedAmount / annualTarget * 100);
+        Label annualProgressLabel = new Label("Annual Savings Progress: " + initPercent + "% (" + annualSavedAmount + " saved)");
         VBox progressBox = new VBox(5, annualProgressBar, annualProgressLabel);
         progressBox.setAlignment(Pos.CENTER);
         progressBox.setPadding(new Insets(10));
 
-        // ----------------- 原有输入区域 -----------------
-        GridPane grid = new GridPane();
-        grid.setPadding(new Insets(10));
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setAlignment(Pos.CENTER);
-
-        // 第一部分：Annual Target（年目标）
+        // ----------------- 年目标部分：年目标值及备注 -----------------
         Label annualLabel = new Label("Annual Target:");
         TextField annualField = new TextField(String.valueOf(annualTarget));
-
-        Label annualRemarkLabel = new Label("remark");
+        Label annualRemarkLabel = new Label("Remark:");
         TextField annualRemarkField = new TextField();
-
         Button annualSetButton = new Button("SET");
         annualSetButton.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-pref-height: 40px;");
 
-        grid.add(annualLabel, 0, 0);
-        grid.add(annualField, 1, 0);
-        grid.add(annualRemarkLabel, 0, 1);
-        grid.add(annualRemarkField, 1, 1);
-        grid.add(annualSetButton, 1, 2);
+        // 年目标部分垂直排列
+        VBox annualBox = new VBox(10, annualLabel, annualField, annualRemarkLabel, annualRemarkField, annualSetButton);
+        annualBox.setPadding(new Insets(10));
+        annualBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
 
-        // 第二部分：Monthly Target（仅用于更新月目标，在Dashboard中显示）
+        // ----------------- 月目标部分：月目标值及备注 -----------------
         Label monthlyLabel = new Label("Monthly Target:");
         TextField monthlyField = new TextField(String.valueOf(savingsGoal));
-
-        Label monthlyRemarkLabel = new Label("remark");
+        Label monthlyRemarkLabel = new Label("Remark:");
         TextField monthlyRemarkField = new TextField();
-
         Button monthlySetButton = new Button("SET");
         monthlySetButton.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-pref-height: 40px;");
 
-        grid.add(monthlyLabel, 0, 3);
-        grid.add(monthlyField, 1, 3);
-        grid.add(monthlyRemarkLabel, 0, 4);
-        grid.add(monthlyRemarkField, 1, 4);
-        grid.add(monthlySetButton, 1, 5);
+        // 月目标部分垂直排列
+        VBox monthlyBox = new VBox(10, monthlyLabel, monthlyField, monthlyRemarkLabel, monthlyRemarkField, monthlySetButton);
+        monthlyBox.setPadding(new Insets(10));
+        monthlyBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
 
-        // ----------------- 组合布局 -----------------
-        // 将进度条部分和输入区域组合在一起
-        VBox container = new VBox(10, progressBox, grid);
+        // ----------------- 将年目标和月目标部分水平排列 -----------------
+        HBox inputRow = new HBox(20, annualBox, monthlyBox);
+        inputRow.setAlignment(Pos.CENTER);
+        inputRow.setPadding(new Insets(10));
+
+        // ----------------- 组合整体布局 -----------------
+        VBox container = new VBox(10, progressBox, inputRow);
         container.setAlignment(Pos.CENTER);
         container.setPadding(new Insets(10));
 
+        Scene scene = new Scene(container, 600, 400);
+        dialog.setScene(scene);
+        dialog.show();
+
         // ----------------- 事件处理 -----------------
-        // 年目标 SET 按钮逻辑：更新 annualTarget 和年度进度条
+        // 年目标 SET 按钮逻辑：更新 annualTarget 并更新年度进度条
         annualSetButton.setOnAction(e -> {
             try {
                 double newAnnual = Double.parseDouble(annualField.getText());
@@ -275,8 +271,7 @@ public class DashboardView extends Application {
                 int percent = (int)(ratio * 100);
                 annualProgressLabel.setText("Annual Savings Progress: " + percent + "% (" + annualSavedAmount + " saved)");
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Annual target updated to: " + annualTarget);
-                // 可选择在设置完成后不关闭对话框，让用户同时设置月目标
-                // dialog.close();
+                // 这里你可以根据需要处理annualRemarkField.getText()（例如存储备注信息）
             } catch (NumberFormatException ex) {
                 showAlert(Alert.AlertType.ERROR, "Error", "Please enter a valid annual target number.");
             }
@@ -303,10 +298,6 @@ public class DashboardView extends Application {
                 showAlert(Alert.AlertType.ERROR, "Error", "Please enter a valid monthly target number.");
             }
         });
-
-        Scene scene = new Scene(container, 600, 400);
-        dialog.setScene(scene);
-        dialog.show();
     }
 
 
