@@ -17,7 +17,7 @@ public class DashboardView extends Application {
     private UserManager userManager = new UserManager();
 
     // 默认本月预算、存钱目标（target）和当前存款金额（实际存款）
-    private double monthlyBudget = 4000.0;
+//    private double monthlyBudget = 4000.0;
     private double savingsGoal = 5000.0;
     // 新增：年目标，默认值可以自行设定
     private double annualTarget = 20000.0;
@@ -25,6 +25,12 @@ public class DashboardView extends Application {
     private double savedAmount = 1500.0;
 
     private double annualSavedAmount = 6000.0;
+    private double shoppingBudget = 0;
+    private double transportBudget = 0;
+    private double dietBudget = 0;
+    private double amusementBudget = 0;
+    private double monthlyBudget = 0; // monthlyBudget = shoppingBudget + transportBudget + dietBudget + amusementBudget
+
 
     // 用于显示信息的控件
     private Label passwordLabel;
@@ -304,71 +310,91 @@ public class DashboardView extends Application {
         });
     }
 
-    // 弹出设置预算的对话框
     private void showBudgetDialog(Stage owner) {
         Stage dialog = new Stage();
         dialog.setTitle("Set Budget");
         dialog.initOwner(owner);
 
+        // 使用GridPane以2行2列排列四个预算区域
         GridPane grid = new GridPane();
         grid.setPadding(new Insets(10));
-        grid.setHgap(10);
-        grid.setVgap(10);
+        grid.setHgap(20);
+        grid.setVgap(20);
         grid.setAlignment(Pos.CENTER);
 
-        // 购物预算
+        // ------ 购物预算区域（左上） ------
+        VBox shoppingBox = new VBox(10);
+        shoppingBox.setAlignment(Pos.CENTER_LEFT);
+        shoppingBox.setPadding(new Insets(10));
+        shoppingBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+
         Label shoppingLabel = new Label("Shopping Budget:");
         TextField shoppingField = new TextField();
-        Label shoppingRemarkLabel = new Label("remark");
+        Label shoppingRemarkLabel = new Label("remark:");
         TextField shoppingRemarkField = new TextField();
         Button shoppingSetButton = new Button("SET");
         shoppingSetButton.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-pref-height: 40px;");
-        grid.add(shoppingLabel, 0, 0);
-        grid.add(shoppingField, 1, 0);
-        grid.add(shoppingRemarkLabel, 0, 1);
-        grid.add(shoppingRemarkField, 1, 1);
-        grid.add(shoppingSetButton, 1, 2);
 
-        // 交通预算
+        shoppingBox.getChildren().addAll(shoppingLabel, shoppingField, shoppingRemarkLabel, shoppingRemarkField, shoppingSetButton);
+
+        // ------ 交通预算区域（右上） ------
+        VBox transportBox = new VBox(10);
+        transportBox.setAlignment(Pos.CENTER_LEFT);
+        transportBox.setPadding(new Insets(10));
+        transportBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+
         Label transportLabel = new Label("Transport Budget:");
         TextField transportField = new TextField();
-        Label transportRemarkLabel = new Label("remark");
+        Label transportRemarkLabel = new Label("remark:");
         TextField transportRemarkField = new TextField();
         Button transportSetButton = new Button("SET");
         transportSetButton.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-pref-height: 40px;");
-        grid.add(transportLabel, 0, 3);
-        grid.add(transportField, 1, 3);
-        grid.add(transportRemarkLabel, 0, 4);
-        grid.add(transportRemarkField, 1, 4);
-        grid.add(transportSetButton, 1, 5);
 
-        // 饮食预算
+        transportBox.getChildren().addAll(transportLabel, transportField, transportRemarkLabel, transportRemarkField, transportSetButton);
+
+        // ------ 饮食预算区域（左下） ------
+        VBox dietBox = new VBox(10);
+        dietBox.setAlignment(Pos.CENTER_LEFT);
+        dietBox.setPadding(new Insets(10));
+        dietBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+
         Label dietLabel = new Label("Diet Budget:");
         TextField dietField = new TextField();
-        Label dietRemarkLabel = new Label("remark");
+        Label dietRemarkLabel = new Label("remark:");
         TextField dietRemarkField = new TextField();
         Button dietSetButton = new Button("SET");
         dietSetButton.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-pref-height: 40px;");
-        grid.add(dietLabel, 0, 6);
-        grid.add(dietField, 1, 6);
-        grid.add(dietRemarkLabel, 0, 7);
-        grid.add(dietRemarkField, 1, 7);
-        grid.add(dietSetButton, 1, 8);
 
-        // 娱乐预算
+        dietBox.getChildren().addAll(dietLabel, dietField, dietRemarkLabel, dietRemarkField, dietSetButton);
+
+        // ------ 娱乐预算区域（右下） ------
+        VBox amusementBox = new VBox(10);
+        amusementBox.setAlignment(Pos.CENTER_LEFT);
+        amusementBox.setPadding(new Insets(10));
+        amusementBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+
         Label amusementLabel = new Label("Amusement Budget:");
         TextField amusementField = new TextField();
-        Label amusementRemarkLabel = new Label("remark");
+        Label amusementRemarkLabel = new Label("remark:");
         TextField amusementRemarkField = new TextField();
         Button amusementSetButton = new Button("SET");
         amusementSetButton.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-pref-height: 40px;");
-        grid.add(amusementLabel, 0, 9);
-        grid.add(amusementField, 1, 9);
-        grid.add(amusementRemarkLabel, 0, 10);
-        grid.add(amusementRemarkField, 1, 10);
-        grid.add(amusementSetButton, 1, 11);
 
-        // 事件处理
+        amusementBox.getChildren().addAll(amusementLabel, amusementField, amusementRemarkLabel, amusementRemarkField, amusementSetButton);
+
+        // 将四个区域分别放入GridPane：购物（0,0），交通（1,0），饮食（0,1），娱乐（1,1）
+        grid.add(shoppingBox, 0, 0);
+        grid.add(transportBox, 1, 0);
+        grid.add(dietBox, 0, 1);
+        grid.add(amusementBox, 1, 1);
+
+        Scene scene = new Scene(grid, 600, 600);
+        dialog.setScene(scene);
+        dialog.show();
+
+        // ------------- 事件处理 -------------
+
+        // 购物预算SET按钮：更新购物预算并刷新月预算总和
         shoppingSetButton.setOnAction(e -> {
             try {
                 double newBudget = Double.parseDouble(shoppingField.getText());
@@ -376,13 +402,16 @@ public class DashboardView extends Application {
                     showAlert(Alert.AlertType.ERROR, "Error", "Budget value must be non-negative.");
                     return;
                 }
-                // 更新购物预算
+                shoppingBudget = newBudget;
+                monthlyBudget = shoppingBudget + transportBudget + dietBudget + amusementBudget;
+                budgetLabel.setText("Monthly Budget: $" + monthlyBudget);
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Shopping budget updated to: " + newBudget);
             } catch (NumberFormatException ex) {
                 showAlert(Alert.AlertType.ERROR, "Error", "Please enter a valid budget number.");
             }
         });
 
+        // 交通预算SET按钮
         transportSetButton.setOnAction(e -> {
             try {
                 double newBudget = Double.parseDouble(transportField.getText());
@@ -390,13 +419,16 @@ public class DashboardView extends Application {
                     showAlert(Alert.AlertType.ERROR, "Error", "Budget value must be non-negative.");
                     return;
                 }
-                // 更新交通预算
+                transportBudget = newBudget;
+                monthlyBudget = shoppingBudget + transportBudget + dietBudget + amusementBudget;
+                budgetLabel.setText("Monthly Budget: $" + monthlyBudget);
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Transport budget updated to: " + newBudget);
             } catch (NumberFormatException ex) {
                 showAlert(Alert.AlertType.ERROR, "Error", "Please enter a valid budget number.");
             }
         });
 
+        // 饮食预算SET按钮
         dietSetButton.setOnAction(e -> {
             try {
                 double newBudget = Double.parseDouble(dietField.getText());
@@ -404,13 +436,16 @@ public class DashboardView extends Application {
                     showAlert(Alert.AlertType.ERROR, "Error", "Budget value must be non-negative.");
                     return;
                 }
-                // 更新饮食预算
+                dietBudget = newBudget;
+                monthlyBudget = shoppingBudget + transportBudget + dietBudget + amusementBudget;
+                budgetLabel.setText("Monthly Budget: $" + monthlyBudget);
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Diet budget updated to: " + newBudget);
             } catch (NumberFormatException ex) {
                 showAlert(Alert.AlertType.ERROR, "Error", "Please enter a valid budget number.");
             }
         });
 
+        // 娱乐预算SET按钮
         amusementSetButton.setOnAction(e -> {
             try {
                 double newBudget = Double.parseDouble(amusementField.getText());
@@ -418,18 +453,16 @@ public class DashboardView extends Application {
                     showAlert(Alert.AlertType.ERROR, "Error", "Budget value must be non-negative.");
                     return;
                 }
-                // 更新娱乐预算
+                amusementBudget = newBudget;
+                monthlyBudget = shoppingBudget + transportBudget + dietBudget + amusementBudget;
+                budgetLabel.setText("Monthly Budget: $" + monthlyBudget);
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Amusement budget updated to: " + newBudget);
             } catch (NumberFormatException ex) {
                 showAlert(Alert.AlertType.ERROR, "Error", "Please enter a valid budget number.");
             }
         });
-
-        Scene scene = new Scene(grid, 400, 600);
-        dialog.setScene(scene);
-        dialog.show();
     }
-
+    
     // 简单的弹窗方法
     private void showAlert(Alert.AlertType type, String title, String message) {
         Alert alert = new Alert(type);
