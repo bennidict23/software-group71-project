@@ -16,19 +16,11 @@ public class DashboardView extends Application {
     // 创建 UserManager 实例，用于操作 CSV 文件（用于修改密码等操作）
     private UserManager userManager = new UserManager();
 
-    // 默认本月预算、存钱目标（target）和当前存款金额（实际存款）
-    private double savingsGoal = 5000.0;
-    // 新增：年目标，默认值可以自行设定
-    private double annualTarget = 20000.0;
-
-    private double savedAmount = 1500.0;
-
-    private double annualSavedAmount = 6000.0;
-    private double shoppingBudget = 0;
-    private double transportBudget = 0;
-    private double dietBudget = 0;
-    private double amusementBudget = 0;
-    private double monthlyBudget = 0; // monthlyBudget = shoppingBudget + transportBudget + dietBudget + amusementBudget
+    // 用户设置的字段
+    private double savingsGoal = 5000.0; // 这里可能是多余的变量，后续可以移除
+    private double annualTarget = 20000.0; // 这里可能是多余的变量，后续可以移除
+    private double savedAmount = 1500.0; // 这里可能是多余的变量，后续可以移除
+    private double annualSavedAmount = 6000.0; // 这里可能是多余的变量，后续可以移除
 
     // 用于显示信息的控件
     private Label passwordLabel;
@@ -50,6 +42,23 @@ public class DashboardView extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
+        // 检查是否有用户登录
+        if (currentUser == null) {
+            // 如果没有用户登录，跳转到登录界面
+            LoginFrame loginFrame = new LoginFrame();
+            Stage loginStage = new Stage();
+            try {
+                loginFrame.start(loginStage);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            primaryStage.close(); // 关闭当前 Dashboard 窗口
+            return; // 退出方法
+        }
+
+        // 加载用户设置
+        userManager.loadUserSettings(currentUser);
+
         primaryStage.setTitle("User Dashboard");
 
         // 初始化FormattedInput实例
@@ -95,30 +104,32 @@ public class DashboardView extends Application {
                 + (currentUser != null ? currentUser.getPassword() : "N/A"));
         Button btnChangePassword = new Button("Change Password");
         btnChangePassword.setOnAction(e -> showChangePasswordDialog(primaryStage));
-        VBox personalInfoBox = new VBox(10, accountLabel, passwordLabel, btnChangePassword);
+        Button btnLogout = new Button("Logout");
+        btnLogout.setOnAction(e -> logout(primaryStage));
+        VBox personalInfoBox = new VBox(10, accountLabel, passwordLabel, btnChangePassword, btnLogout);
         personalInfoBox.setPadding(new Insets(10));
         personalInfoBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
         // 设置个人信息框的固定尺寸
         personalInfoBox.setPrefSize(300, 150);
 
         // 显示本月预算
-        budgetLabel = new Label("Monthly Budget: $" + monthlyBudget);
+        budgetLabel = new Label("Monthly Budget: $" + currentUser.getMonthlyBudget());
         // 显示存钱目标
-        goalLabel = new Label("Monthly Savings Goal: $" + savingsGoal);
+        goalLabel = new Label("Monthly Savings Goal: $" + currentUser.getMonthlyTarget());
         // 显示存钱进度（progress = 当前存款 / 存钱目标）
-        progressBar = new ProgressBar(savedAmount / savingsGoal);
-        progressLabel = new Label("Savings Progress: " + (int) (savedAmount / savingsGoal * 100)
-                + "% (" + savedAmount + " saved)");
+        progressBar = new ProgressBar(currentUser.getSavedAmount() / currentUser.getMonthlyTarget());
+        progressLabel = new Label("Savings Progress: " + (int) (currentUser.getSavedAmount() / currentUser.getMonthlyTarget() * 100)
+                + "% (" + currentUser.getSavedAmount() + " saved)");
         // 创建设置预算和目标的按钮
-        Button btnSetBudgetGoal = new Button("Set Goal");
-        btnSetBudgetGoal.setOnAction(e -> showBudgetGoalDialog(primaryStage));
+        Button btnSetGoal = new Button("Set Goal");
+        btnSetGoal.setOnAction(e -> showGoalDialog(primaryStage));
 
         // 创建设置预算的按钮
         Button btnSetBudget = new Button("Set Budget");
         btnSetBudget.setOnAction(e -> showBudgetDialog(primaryStage));
 
         // 将预算、目标、进度和按钮放在一起
-        HBox buttonsBox = new HBox(10, btnSetBudgetGoal, btnSetBudget);
+        HBox buttonsBox = new HBox(10, btnSetGoal, btnSetBudget);
         buttonsBox.setAlignment(Pos.CENTER);
 
         VBox budgetBox = new VBox(10, budgetLabel, goalLabel, progressBar, progressLabel, buttonsBox);
@@ -208,23 +219,23 @@ public class DashboardView extends Application {
     }
 
     // 弹出设置预算和存钱目标的对话框
-    private void showBudgetGoalDialog(Stage owner) {
+    private void showGoalDialog(Stage owner) {
         Stage dialog = new Stage();
-        dialog.setTitle("Set Budget & Goal");
+        dialog.setTitle("Set Goal");
         dialog.initOwner(owner);
 
         // ----------------- 顶部：年度进度条 -----------------
-        ProgressBar annualProgressBar = new ProgressBar(annualSavedAmount / annualTarget);
+        ProgressBar annualProgressBar = new ProgressBar(currentUser.getAnnualSavedAmount() / currentUser.getAnnualTarget());
         annualProgressBar.setPrefWidth(550);
-        int initPercent = (int)(annualSavedAmount / annualTarget * 100);
-        Label annualProgressLabel = new Label("Annual Savings Progress: " + initPercent + "% (" + annualSavedAmount + " saved)");
+        int initPercent = (int)(currentUser.getAnnualSavedAmount() / currentUser.getAnnualTarget() * 100);
+        Label annualProgressLabel = new Label("Annual Savings Progress: " + initPercent + "% (" + currentUser.getAnnualSavedAmount() + " saved)");
         VBox progressBox = new VBox(5, annualProgressBar, annualProgressLabel);
         progressBox.setAlignment(Pos.CENTER);
         progressBox.setPadding(new Insets(10));
 
         // ----------------- 年目标部分：年目标值及备注 -----------------
         Label annualLabel = new Label("Annual Target:");
-        TextField annualField = new TextField(String.valueOf(annualTarget));
+        TextField annualField = new TextField(String.valueOf(currentUser.getAnnualTarget()));
         Label annualRemarkLabel = new Label("Remark:");
         TextField annualRemarkField = new TextField();
         Button annualSetButton = new Button("SET");
@@ -237,7 +248,7 @@ public class DashboardView extends Application {
 
         // ----------------- 月目标部分：月目标值及备注 -----------------
         Label monthlyLabel = new Label("Monthly Target:");
-        TextField monthlyField = new TextField(String.valueOf(savingsGoal));
+        TextField monthlyField = new TextField(String.valueOf(currentUser.getMonthlyTarget()));
         Label monthlyRemarkLabel = new Label("Remark:");
         TextField monthlyRemarkField = new TextField();
         Button monthlySetButton = new Button("SET");
@@ -271,14 +282,14 @@ public class DashboardView extends Application {
                     showAlert(Alert.AlertType.ERROR, "Error", "Annual value must be positive.");
                     return;
                 }
-                annualTarget = newAnnual;
+                currentUser.setAnnualTarget(newAnnual);
                 // 计算年度目标进度
-                double ratio = annualSavedAmount / newAnnual;
+                double ratio = currentUser.getAnnualSavedAmount() / newAnnual;
                 annualProgressBar.setProgress(ratio);
                 int percent = (int)(ratio * 100);
-                annualProgressLabel.setText("Annual Savings Progress: " + percent + "% (" + annualSavedAmount + " saved)");
-                showAlert(Alert.AlertType.INFORMATION, "Success", "Annual target updated to: " + annualTarget);
-                // 这里你可以根据需要处理annualRemarkField.getText()（例如存储备注信息）
+                annualProgressLabel.setText("Annual Savings Progress: " + percent + "% (" + currentUser.getAnnualSavedAmount() + " saved)");
+                showAlert(Alert.AlertType.INFORMATION, "Success", "Annual target updated to: " + newAnnual);
+                userManager.saveUserSettings(currentUser);
             } catch (NumberFormatException ex) {
                 showAlert(Alert.AlertType.ERROR, "Error", "Please enter a valid annual target number.");
             }
@@ -292,14 +303,15 @@ public class DashboardView extends Application {
                     showAlert(Alert.AlertType.ERROR, "Error", "Monthly value must be positive.");
                     return;
                 }
-                savingsGoal = newMonthly;
+                currentUser.setMonthlyTarget(newMonthly);
                 // 假设 Dashboard 中 goalLabel 显示的是月目标，这里更新它
-                goalLabel.setText("Monthly Saving Goal: $" + savingsGoal);
-                progressBar.setProgress(savedAmount / savingsGoal);
+                goalLabel.setText("Monthly Saving Goal: $" + newMonthly);
+                progressBar.setProgress(currentUser.getSavedAmount() / newMonthly);
                 progressLabel.setText("Savings Progress: "
-                        + (int)(savedAmount / savingsGoal * 100)
-                        + "% (" + savedAmount + " saved)");
-                showAlert(Alert.AlertType.INFORMATION, "Success", "Monthly target updated to: " + savingsGoal);
+                        + (int)(currentUser.getSavedAmount() / newMonthly * 100)
+                        + "% (" + currentUser.getSavedAmount() + " saved)");
+                showAlert(Alert.AlertType.INFORMATION, "Success", "Monthly target updated to: " + newMonthly);
+                userManager.saveUserSettings(currentUser);
                 dialog.close();
             } catch (NumberFormatException ex) {
                 showAlert(Alert.AlertType.ERROR, "Error", "Please enter a valid monthly target number.");
@@ -326,7 +338,7 @@ public class DashboardView extends Application {
         shoppingBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
 
         Label shoppingLabel = new Label("Shopping Budget:");
-        TextField shoppingField = new TextField();
+        TextField shoppingField = new TextField(String.valueOf(currentUser.getShoppingBudget()));
         Label shoppingRemarkLabel = new Label("remark:");
         TextField shoppingRemarkField = new TextField();
         Button shoppingSetButton = new Button("SET");
@@ -341,7 +353,7 @@ public class DashboardView extends Application {
         transportBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
 
         Label transportLabel = new Label("Transport Budget:");
-        TextField transportField = new TextField();
+        TextField transportField = new TextField(String.valueOf(currentUser.getTransportBudget()));
         Label transportRemarkLabel = new Label("remark:");
         TextField transportRemarkField = new TextField();
         Button transportSetButton = new Button("SET");
@@ -356,7 +368,7 @@ public class DashboardView extends Application {
         dietBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
 
         Label dietLabel = new Label("Diet Budget:");
-        TextField dietField = new TextField();
+        TextField dietField = new TextField(String.valueOf(currentUser.getDietBudget()));
         Label dietRemarkLabel = new Label("remark:");
         TextField dietRemarkField = new TextField();
         Button dietSetButton = new Button("SET");
@@ -371,7 +383,7 @@ public class DashboardView extends Application {
         amusementBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
 
         Label amusementLabel = new Label("Amusement Budget:");
-        TextField amusementField = new TextField();
+        TextField amusementField = new TextField(String.valueOf(currentUser.getAmusementBudget()));
         Label amusementRemarkLabel = new Label("remark:");
         TextField amusementRemarkField = new TextField();
         Button amusementSetButton = new Button("SET");
@@ -398,10 +410,16 @@ public class DashboardView extends Application {
                     showAlert(Alert.AlertType.ERROR, "Error", "Budget value must be non-negative.");
                     return;
                 }
-                shoppingBudget = newBudget;
-                monthlyBudget = shoppingBudget + transportBudget + dietBudget + amusementBudget;
-                budgetLabel.setText("Monthly Budget: $" + monthlyBudget);
+                currentUser.setShoppingBudget(newBudget);
+                currentUser.setMonthlyBudget(
+                        currentUser.getShoppingBudget() +
+                                currentUser.getTransportBudget() +
+                                currentUser.getDietBudget() +
+                                currentUser.getAmusementBudget()
+                );
+                budgetLabel.setText("Monthly Budget: $" + currentUser.getMonthlyBudget());
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Shopping budget updated to: " + newBudget);
+                userManager.saveUserSettings(currentUser);
             } catch (NumberFormatException ex) {
                 showAlert(Alert.AlertType.ERROR, "Error", "Please enter a valid budget number.");
             }
@@ -415,10 +433,16 @@ public class DashboardView extends Application {
                     showAlert(Alert.AlertType.ERROR, "Error", "Budget value must be non-negative.");
                     return;
                 }
-                transportBudget = newBudget;
-                monthlyBudget = shoppingBudget + transportBudget + dietBudget + amusementBudget;
-                budgetLabel.setText("Monthly Budget: $" + monthlyBudget);
+                currentUser.setTransportBudget(newBudget);
+                currentUser.setMonthlyBudget(
+                        currentUser.getShoppingBudget() +
+                                currentUser.getTransportBudget() +
+                                currentUser.getDietBudget() +
+                                currentUser.getAmusementBudget()
+                );
+                budgetLabel.setText("Monthly Budget: $" + currentUser.getMonthlyBudget());
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Transport budget updated to: " + newBudget);
+                userManager.saveUserSettings(currentUser);
             } catch (NumberFormatException ex) {
                 showAlert(Alert.AlertType.ERROR, "Error", "Please enter a valid budget number.");
             }
@@ -432,10 +456,16 @@ public class DashboardView extends Application {
                     showAlert(Alert.AlertType.ERROR, "Error", "Budget value must be non-negative.");
                     return;
                 }
-                dietBudget = newBudget;
-                monthlyBudget = shoppingBudget + transportBudget + dietBudget + amusementBudget;
-                budgetLabel.setText("Monthly Budget: $" + monthlyBudget);
+                currentUser.setDietBudget(newBudget);
+                currentUser.setMonthlyBudget(
+                        currentUser.getShoppingBudget() +
+                                currentUser.getTransportBudget() +
+                                currentUser.getDietBudget() +
+                                currentUser.getAmusementBudget()
+                );
+                budgetLabel.setText("Monthly Budget: $" + currentUser.getMonthlyBudget());
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Diet budget updated to: " + newBudget);
+                userManager.saveUserSettings(currentUser);
             } catch (NumberFormatException ex) {
                 showAlert(Alert.AlertType.ERROR, "Error", "Please enter a valid budget number.");
             }
@@ -449,10 +479,16 @@ public class DashboardView extends Application {
                     showAlert(Alert.AlertType.ERROR, "Error", "Budget value must be non-negative.");
                     return;
                 }
-                amusementBudget = newBudget;
-                monthlyBudget = shoppingBudget + transportBudget + dietBudget + amusementBudget;
-                budgetLabel.setText("Monthly Budget: $" + monthlyBudget);
+                currentUser.setAmusementBudget(newBudget);
+                currentUser.setMonthlyBudget(
+                        currentUser.getShoppingBudget() +
+                                currentUser.getTransportBudget() +
+                                currentUser.getDietBudget() +
+                                currentUser.getAmusementBudget()
+                );
+                budgetLabel.setText("Monthly Budget: $" + currentUser.getMonthlyBudget());
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Amusement budget updated to: " + newBudget);
+                userManager.saveUserSettings(currentUser);
             } catch (NumberFormatException ex) {
                 showAlert(Alert.AlertType.ERROR, "Error", "Please enter a valid budget number.");
             }
@@ -466,5 +502,19 @@ public class DashboardView extends Application {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    // 退出登录方法
+    private void logout(Stage primaryStage) {
+        DashboardView.currentUser = null; // 清除当前用户信息
+        primaryStage.close(); // 关闭Dashboard界面
+        // 重新启动登录界面
+        LoginFrame loginFrame = new LoginFrame();
+        Stage loginStage = new Stage();
+        try {
+            loginFrame.start(loginStage);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 }
