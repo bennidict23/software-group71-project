@@ -1,6 +1,7 @@
 package com.financetracker.boundary.analysis;
 
 import com.financetracker.control.DataAnalysisController;
+import com.financetracker.entity.CategoryExpense;
 import javafx.geometry.Insets;
 import javafx.scene.chart.PieChart;
 import javafx.scene.control.Button;
@@ -9,6 +10,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import java.util.List;
 
 /**
  * View component for displaying spending structure analysis with a pie chart
@@ -24,9 +26,9 @@ public class SpendingStructureView extends BorderPane {
     private DataAnalysisController controller;
 
     public SpendingStructureView() {
-        controller = new DataAnalysisController();
+        controller = DataAnalysisController.getDefaultInstance();
         initializeUI();
-        loadDummyData(); // For now, we'll use dummy data for visualization
+        updateChart(); // Load real data from the controller
     }
 
     private void initializeUI() {
@@ -40,7 +42,7 @@ public class SpendingStructureView extends BorderPane {
         Label timeLabel = new Label("Time Period:");
         timePeriodComboBox = new ComboBox<>();
         timePeriodComboBox.getItems().addAll("Last Month", "Last 3 Months", "Last 6 Months", "This Year");
-        timePeriodComboBox.setValue("Last Month");
+        timePeriodComboBox.setValue("Last 3 Months");
         timePeriodComboBox.setOnAction(e -> updateChart());
 
         // Refresh button
@@ -76,27 +78,34 @@ public class SpendingStructureView extends BorderPane {
      */
     private void updateChart() {
         String selectedPeriod = timePeriodComboBox.getValue();
-        // In a real implementation, we would fetch data from the controller
-        // based on the selected time period
+        int months = getMonthsFromSelection(selectedPeriod);
 
-        // For now, we'll just simulate a refresh with the same dummy data
-        spendingPieChart.getData().clear();
-        loadDummyData();
-    }
+        // Get real data from the controller
+        List<CategoryExpense> spendingData = controller.getSpendingByCategory(months);
 
-    /**
-     * Loads dummy data into the pie chart for demonstration
-     */
-    private void loadDummyData() {
         // Clear existing data
         spendingPieChart.getData().clear();
 
-        // Add dummy data
-        spendingPieChart.getData().add(new PieChart.Data("Food & Dining", 35));
-        spendingPieChart.getData().add(new PieChart.Data("Transportation", 15));
-        spendingPieChart.getData().add(new PieChart.Data("Entertainment", 10));
-        spendingPieChart.getData().add(new PieChart.Data("Shopping", 20));
-        spendingPieChart.getData().add(new PieChart.Data("Utilities", 12));
-        spendingPieChart.getData().add(new PieChart.Data("Others", 8));
+        // Add data from the controller
+        for (CategoryExpense expense : spendingData) {
+            spendingPieChart.getData().add(
+                    new PieChart.Data(expense.getCategory(), expense.getAmount()));
+        }
+    }
+
+    /**
+     * Converts the time period selection to number of months
+     * 
+     * @param selection The selected time period
+     * @return The number of months for the analysis
+     */
+    private int getMonthsFromSelection(String selection) {
+        return switch (selection) {
+            case "Last Month" -> 1;
+            case "Last 3 Months" -> 3;
+            case "Last 6 Months" -> 6;
+            case "This Year" -> 12;
+            default -> 3; // Default to 3 months
+        };
     }
 }

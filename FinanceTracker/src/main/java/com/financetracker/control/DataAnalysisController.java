@@ -4,17 +4,39 @@ import com.financetracker.entity.CategoryExpense;
 import com.financetracker.entity.Transaction;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Controller class for handling data analysis operations.
  * This is a control class in the MVC pattern.
  */
 public class DataAnalysisController {
+
+    private final DataAccessInterface dataAccess;
+
+    /**
+     * Constructs a DataAnalysisController with the specified data access interface
+     * 
+     * @param dataAccess The data access interface to use
+     */
+    public DataAnalysisController(DataAccessInterface dataAccess) {
+        this.dataAccess = dataAccess;
+    }
+
+    /**
+     * Gets a default instance of the controller with mock data
+     * 
+     * @return A DataAnalysisController using mock data
+     */
+    public static DataAnalysisController getDefaultInstance() {
+        return new DataAnalysisController(new MockDataAccess());
+    }
 
     /**
      * Gets spending data by category for the specified time period
@@ -23,18 +45,15 @@ public class DataAnalysisController {
      * @return List of CategoryExpense objects with category names and expenses
      */
     public List<CategoryExpense> getSpendingByCategory(int months) {
-        // In a real application, this would fetch data from a database or file
-        // For now, we'll return dummy data
-        List<CategoryExpense> result = new ArrayList<>();
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minus(months, ChronoUnit.MONTHS);
 
-        result.add(new CategoryExpense("Food & Dining", 3500));
-        result.add(new CategoryExpense("Transportation", 1500));
-        result.add(new CategoryExpense("Entertainment", 1000));
-        result.add(new CategoryExpense("Shopping", 2000));
-        result.add(new CategoryExpense("Utilities", 1200));
-        result.add(new CategoryExpense("Others", 800));
+        Map<String, Double> spendingMap = dataAccess.getSpendingByCategory(startDate, endDate);
 
-        return result;
+        // Convert map to list of CategoryExpense objects
+        return spendingMap.entrySet().stream()
+                .map(entry -> new CategoryExpense(entry.getKey(), entry.getValue()))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -44,22 +63,10 @@ public class DataAnalysisController {
      * @return Map with month names as keys and total spending as values
      */
     public Map<String, Double> getHistoricalSpending(int months) {
-        // In a real application, this would fetch data from a database or file
-        // For now, we'll return dummy data
-        Map<String, Double> result = new HashMap<>();
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minus(months, ChronoUnit.MONTHS);
 
-        LocalDate today = LocalDate.now();
-        for (int i = months - 1; i >= 0; i--) {
-            LocalDate date = today.minus(i, ChronoUnit.MONTHS);
-            String monthName = date.getMonth().toString().substring(0, 3);
-
-            // Generate some dummy data with a bit of randomness
-            double baseAmount = 4000;
-            double randomFactor = 0.8 + Math.random() * 0.4; // Random between 0.8 and 1.2
-            result.put(monthName, baseAmount * randomFactor);
-        }
-
-        return result;
+        return dataAccess.getSpendingByMonth(startDate, endDate);
     }
 
     /**
@@ -85,14 +92,50 @@ public class DataAnalysisController {
         LocalDate today = LocalDate.now();
         for (int i = 0; i < forecastMonths; i++) {
             LocalDate date = today.plus(i + 1, ChronoUnit.MONTHS);
-            String monthName = date.getMonth().toString().substring(0, 3);
+            String monthKey = date.getMonth().toString().substring(0, 3) + " " + date.getYear();
 
             // Add a slight upward trend and some randomness
             double trendFactor = 1.0 + (i * 0.03); // 3% increase per month
             double randomFactor = 0.9 + Math.random() * 0.2; // Random between 0.9 and 1.1
-            forecast.put(monthName, avgMonthly * trendFactor * randomFactor);
+            forecast.put(monthKey, avgMonthly * trendFactor * randomFactor);
         }
 
         return forecast;
+    }
+
+    /**
+     * Gets the detailed transaction list for a specific category and time period
+     * 
+     * @param category The category to filter by
+     * @param months   Number of months to include
+     * @return List of transactions matching the criteria
+     */
+    public List<Transaction> getTransactionsByCategory(String category, int months) {
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minus(months, ChronoUnit.MONTHS);
+
+        return dataAccess.getTransactionsByCategory(category, startDate, endDate);
+    }
+
+    /**
+     * Gets all transactions for a specific time period
+     * 
+     * @param months Number of months to include
+     * @return List of all transactions in the time period
+     */
+    public List<Transaction> getAllTransactions(int months) {
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minus(months, ChronoUnit.MONTHS);
+
+        return dataAccess.getTransactions(startDate, endDate);
+    }
+
+    /**
+     * Gets all available transaction categories
+     * 
+     * @return List of category names
+     */
+    public List<String> getAllCategories() {
+        return dataAccess.getCategories();
     }
 }
