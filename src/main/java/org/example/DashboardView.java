@@ -99,7 +99,7 @@ public class DashboardView extends Application {
         personalInfoBox.setPadding(new Insets(10));
         personalInfoBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
         // 设置个人信息框的固定尺寸
-        personalInfoBox.setPrefSize(300, 150);
+        personalInfoBox.setPrefSize(300, 100);
 
         // 显示本月预算
         budgetLabel = new Label("Monthly Budget: $" + monthlyBudget);
@@ -151,7 +151,7 @@ public class DashboardView extends Application {
         mainLayout.setAlignment(Pos.CENTER);
         mainLayout.setPadding(new Insets(20));
 
-        Scene scene = new Scene(mainLayout, 800, 600);
+        Scene scene = new Scene(mainLayout, 1000, 800);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
