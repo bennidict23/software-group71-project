@@ -163,8 +163,8 @@ public class FormattedInput extends Application {
         table.setEditable(true);
 
         // Create table columns
-        String[] headers = {"User", "Source", "Date", "Amount", "Category", "Description"};
-        for (int i = 0; i < headers.length; i++) {
+        String[] headers = {"Source", "Date", "Amount", "Category", "Description"};
+        for (int i = 1; i < headers.length; i++) {
             final int columnIndex = i;
             TableColumn<ObservableStringArray, String> column = new TableColumn<>(headers[i]);
 
