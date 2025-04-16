@@ -17,7 +17,6 @@ public class DashboardView extends Application {
     private UserManager userManager = new UserManager();
 
     // 默认本月预算、存钱目标（target）和当前存款金额（实际存款）
-//    private double monthlyBudget = 4000.0;
     private double savingsGoal = 5000.0;
     // 新增：年目标，默认值可以自行设定
     private double annualTarget = 20000.0;
@@ -30,7 +29,6 @@ public class DashboardView extends Application {
     private double dietBudget = 0;
     private double amusementBudget = 0;
     private double monthlyBudget = 0; // monthlyBudget = shoppingBudget + transportBudget + dietBudget + amusementBudget
-
 
     // 用于显示信息的控件
     private Label passwordLabel;
@@ -90,6 +88,19 @@ public class DashboardView extends Application {
         Label titleLabel = new Label("Dashboard");
         titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
 
+        // 显示用户个人信息：账户和密码
+        Label accountLabel = new Label("Account: "
+                + (currentUser != null ? currentUser.getUsername() : "N/A"));
+        passwordLabel = new Label("Password: "
+                + (currentUser != null ? currentUser.getPassword() : "N/A"));
+        Button btnChangePassword = new Button("Change Password");
+        btnChangePassword.setOnAction(e -> showChangePasswordDialog(primaryStage));
+        VBox personalInfoBox = new VBox(10, accountLabel, passwordLabel, btnChangePassword);
+        personalInfoBox.setPadding(new Insets(10));
+        personalInfoBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+        // 设置个人信息框的固定尺寸
+        personalInfoBox.setPrefSize(300, 150);
+
         // 显示本月预算
         budgetLabel = new Label("Monthly Budget: $" + monthlyBudget);
         // 显示存钱目标
@@ -107,24 +118,19 @@ public class DashboardView extends Application {
         btnSetBudget.setOnAction(e -> showBudgetDialog(primaryStage));
 
         // 将预算、目标、进度和按钮放在一起
-        VBox budgetBox = new VBox(10, budgetLabel, goalLabel, progressBar, progressLabel, btnSetBudgetGoal, btnSetBudget);
+        HBox buttonsBox = new HBox(10, btnSetBudgetGoal, btnSetBudget);
+        buttonsBox.setAlignment(Pos.CENTER);
+
+        VBox budgetBox = new VBox(10, budgetLabel, goalLabel, progressBar, progressLabel, buttonsBox);
         budgetBox.setPadding(new Insets(10));
         budgetBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
         // 设置预算框的固定尺寸
         budgetBox.setPrefSize(300, 250);
 
-        // 显示用户个人信息：账户和密码
-        Label accountLabel = new Label("Account: "
-                + (currentUser != null ? currentUser.getUsername() : "N/A"));
-        passwordLabel = new Label("Password: "
-                + (currentUser != null ? currentUser.getPassword() : "N/A"));
-        Button btnChangePassword = new Button("Change Password");
-        btnChangePassword.setOnAction(e -> showChangePasswordDialog(primaryStage));
-        VBox personalInfoBox = new VBox(10, accountLabel, passwordLabel, btnChangePassword);
-        personalInfoBox.setPadding(new Insets(10));
-        personalInfoBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
-        // 设置个人信息框的固定尺寸
-        personalInfoBox.setPrefSize(300, 150);
+        // 将个人信息和预算框放在左侧，垂直排列
+        HBox topBox = new HBox(20, personalInfoBox, budgetBox);
+        topBox.setAlignment(Pos.TOP_CENTER);
+        topBox.setPadding(new Insets(10));
 
         // 预留图像位置
         ImageView imageView = new ImageView();
@@ -140,17 +146,8 @@ public class DashboardView extends Application {
         // 设置图像框的固定尺寸
         imageBox.setPrefSize(300, 300);
 
-        // 将个人信息和预算框放在左侧，垂直排列
-        VBox leftColumn = new VBox(20, personalInfoBox, budgetBox);
-        leftColumn.setAlignment(Pos.TOP_LEFT);
-        leftColumn.setPadding(new Insets(10));
-
-        // 将左侧和右侧图像框放在一个 HBox 内
-        HBox mainBox = new HBox(20, leftColumn, imageBox);
-        mainBox.setAlignment(Pos.CENTER);
-
-        // 主布局，将导航下拉框放在最顶端
-        VBox mainLayout = new VBox(20, navigationBox, titleLabel, mainBox);
+        // 将顶部和图像框放在一个 VBox 内
+        VBox mainLayout = new VBox(20, navigationBox, titleLabel, topBox, imageBox);
         mainLayout.setAlignment(Pos.CENTER);
         mainLayout.setPadding(new Insets(20));
 
@@ -393,7 +390,6 @@ public class DashboardView extends Application {
         dialog.show();
 
         // ------------- 事件处理 -------------
-
         // 购物预算SET按钮：更新购物预算并刷新月预算总和
         shoppingSetButton.setOnAction(e -> {
             try {
@@ -462,7 +458,7 @@ public class DashboardView extends Application {
             }
         });
     }
-    
+
     // 简单的弹窗方法
     private void showAlert(Alert.AlertType type, String title, String message) {
         Alert alert = new Alert(type);
