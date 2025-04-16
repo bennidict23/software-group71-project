@@ -75,19 +75,7 @@ public class FormattedInput extends Application {
         mainLayout.setPadding(new Insets(20));
 
         // Create button area
-        Button importButton = new Button("Import CSV File");
-        importButton.setOnAction(e -> importCSV(primaryStage));
-
-        Button templateButton = new Button("Download CSV Template");
-        templateButton.setOnAction(e -> downloadTemplate(primaryStage));
-
-        Button saveButton = new Button("Save Changes");
-        saveButton.setOnAction(e -> saveToTransactionCSV());
-
-        Button deleteButton = new Button("Delete Selected");
-        deleteButton.setOnAction(e -> deleteSelectedRows());
-
-        HBox buttonBox = new HBox(10, importButton, templateButton, saveButton, deleteButton);
+        HBox buttonBox = gethBox(primaryStage);
 
         // Create table view
         tableView = createTableView();
@@ -105,6 +93,23 @@ public class FormattedInput extends Application {
         Scene scene = new Scene(mainLayout, 1000, 800);
         primaryStage.setScene(scene);
         primaryStage.show();
+    }
+
+    private HBox gethBox(Stage primaryStage) {
+        Button importButton = new Button("Import CSV File");
+        importButton.setOnAction(e -> importCSV(primaryStage));
+
+        Button templateButton = new Button("Download CSV Template");
+        templateButton.setOnAction(e -> downloadTemplate(primaryStage));
+
+        Button saveButton = new Button("Save Changes");
+        saveButton.setOnAction(e -> saveToTransactionCSV());
+
+        Button deleteButton = new Button("Delete Selected");
+        deleteButton.setOnAction(e -> deleteSelectedRows());
+
+        HBox buttonBox = new HBox(10, importButton, templateButton, saveButton, deleteButton);
+        return buttonBox;
     }
 
     private VBox createAddRecordForm() {
@@ -158,8 +163,8 @@ public class FormattedInput extends Application {
         table.setEditable(true);
 
         // Create table columns
-        String[] headers = {"User", "Source", "Date", "Amount", "Category", "Description"};
-        for (int i = 0; i < headers.length; i++) {
+        String[] headers = {"Source", "Date", "Amount", "Category", "Description"};
+        for (int i = 1; i < headers.length; i++) {
             final int columnIndex = i;
             TableColumn<ObservableStringArray, String> column = new TableColumn<>(headers[i]);
 
@@ -243,59 +248,81 @@ public class FormattedInput extends Application {
         if (file != null) {
             lastSelectedFile = file;
 
-            String[] encodings = {"GBK", "UTF-8", "GB18030", "GB2312", "ISO-8859-1"};
+            // 微信常见编码优先级更高
+            String[] encodings = {"UTF-8", "GBK", "GB18030", "GB2312", "ISO-8859-1"};
             boolean fileProcessed = false;
+            IOException lastError = null;
 
             for (String encoding : encodings) {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), encoding))) {
-                    String line;
-                    boolean isAlipayFile = false;
-                    boolean isWechatFile = false;
-                    int lineCount = 0;
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(new FileInputStream(file), encoding))) {
 
-                    // Detect file type by checking first few lines
-                    while ((line = reader.readLine()) != null && lineCount < 10) {
-                        if (line.contains("Alipay Account") || line.contains("Alipay") || line.contains("alipay")) {
-                            isAlipayFile = true;
-                            break;
-                        }
-                        if (line.contains("WeChat Payment Details") || line.contains("WeChat Pay")) {
-                            isWechatFile = true;
-                            break;
-                        }
-                        lineCount++;
-                    }
+                    // 改进的文件类型检测
+                    FileType fileType = detectFileType(reader);
 
-                    // Process file based on detection
-                    if (isAlipayFile) {
+                    if (fileType == FileType.ALIPAY) {
                         importAlipayWithEncoding(encoding);
                         fileProcessed = true;
                         break;
-                    } else if (isWechatFile) {
+                    } else if (fileType == FileType.WECHAT) {
                         importWechatWithEncoding(encoding);
                         fileProcessed = true;
                         break;
                     } else {
-                        // Try to import as regular CSV with current encoding
                         try {
                             importRegularCSV(file, encoding);
                             fileProcessed = true;
                             break;
                         } catch (IOException e) {
-                            // Import failed, try next encoding
+                            lastError = e;
                             continue;
                         }
                     }
                 } catch (IOException e) {
-                    // Current encoding failed, try next
+                    lastError = e;
                     continue;
                 }
             }
 
             if (!fileProcessed) {
-                showErrorAlert("Import Error", "Failed to import file, all encoding attempts failed.");
+                String errorMsg = "Failed to import file.\n";
+                if (lastError != null) {
+                    errorMsg += "Last error: " + lastError.getMessage();
+                }
+                showErrorAlert("Import Error", errorMsg);
             }
         }
+    }
+
+    // 改进的文件类型检测方法
+    private FileType detectFileType(BufferedReader reader) throws IOException {
+        String line;
+        int lineCount = 0;
+
+        // 读取前10行进行检测
+        while ((line = reader.readLine()) != null && lineCount < 10) {
+            // 支付宝检测
+            if (line.contains("支付宝") || line.contains("Alipay")
+                    || line.contains("交易号") || line.contains("商户订单号")) {
+                return FileType.ALIPAY;
+            }
+
+            // 微信检测 - 增强特征检测
+            if (line.contains("微信支付") || line.contains("WeChat Pay")
+                    || line.contains("交易时间") || line.contains("交易单号")
+                    || line.matches(".*微信.*账单.*") || line.contains("微信账单")) {
+                return FileType.WECHAT;
+            }
+
+            lineCount++;
+        }
+
+        return FileType.REGULAR;
+    }
+
+    // 文件类型枚举
+    private enum FileType {
+        ALIPAY, WECHAT, REGULAR
     }
 
     private void importRegularCSV(File file, String encoding) throws IOException {
