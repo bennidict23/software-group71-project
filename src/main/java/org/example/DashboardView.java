@@ -462,7 +462,7 @@ public class DashboardView extends Application {
             }
         });
     }
-    
+
     // 简单的弹窗方法
     private void showAlert(Alert.AlertType type, String title, String message) {
         Alert alert = new Alert(type);
