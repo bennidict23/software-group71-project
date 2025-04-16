@@ -17,10 +17,10 @@ public class DashboardView extends Application {
     private UserManager userManager = new UserManager();
 
     // 用户设置的字段
-    private double savingsGoal = 5000.0; // 这里可能是多余的变量，后续可以移除
-    private double annualTarget = 20000.0; // 这里可能是多余的变量，后续可以移除
-    private double savedAmount = 1500.0; // 这里可能是多余的变量，后续可以移除
-    private double annualSavedAmount = 6000.0; // 这里可能是多余的变量，后续可以移除
+    //    private double savingsGoal = 5000.0; // 这里可能是多余的变量，后续可以移除
+    //    private double annualTarget = 20000.0; // 这里可能是多余的变量，后续可以移除
+    //    private double savedAmount = 1500.0; // 这里可能是多余的变量，后续可以移除
+    //    private double annualSavedAmount = 6000.0; // 这里可能是多余的变量，后续可以移除
 
     // 用于显示信息的控件
     private Label passwordLabel;
