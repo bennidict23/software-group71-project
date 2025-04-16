@@ -6,6 +6,7 @@ import java.util.List;
 
 public class UserManager {
     private static final String USERS_FILE = "users.csv";
+    private static final String SETTINGS_FILE = "user_settings.csv";
 
     public UserManager() {
         // 如果文件不存在，则创建并添加表头
@@ -13,6 +14,14 @@ public class UserManager {
         if (!file.exists()) {
             try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
                 writer.println("username,password");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        file = new File(SETTINGS_FILE);
+        if (!file.exists()) {
+            try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
+                writer.println("username,annualTarget,monthlyTarget,monthlyBudget,shoppingBudget,transportBudget,dietBudget,amusementBudget,savedAmount,annualSavedAmount");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -42,7 +51,9 @@ public class UserManager {
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
                 if (parts.length >= 2 && parts[0].equals(username)) {
-                    return new User(parts[0], parts[1]);
+                    User user = new User(parts[0], parts[1]);
+                    loadUserSettings(user); // 确保加载用户设置
+                    return user;
                 }
             }
         } catch (IOException e) {
@@ -112,5 +123,80 @@ public class UserManager {
             return user.getPassword().equals(password);
         }
         return false;
+    }
+
+    // 加载用户设置
+    public void loadUserSettings(User user) {
+        try (BufferedReader br = new BufferedReader(new FileReader(SETTINGS_FILE))) {
+            String line;
+            br.readLine(); // 跳过标题行
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 10 && parts[0].equals(user.getUsername())) {
+                    user.setAnnualTarget(Double.parseDouble(parts[1]));
+                    user.setMonthlyTarget(Double.parseDouble(parts[2]));
+                    user.setMonthlyBudget(Double.parseDouble(parts[3]));
+                    user.setShoppingBudget(Double.parseDouble(parts[4]));
+                    user.setTransportBudget(Double.parseDouble(parts[5]));
+                    user.setDietBudget(Double.parseDouble(parts[6]));
+                    user.setAmusementBudget(Double.parseDouble(parts[7]));
+                    user.setSavedAmount(Double.parseDouble(parts[8]));
+                    user.setAnnualSavedAmount(Double.parseDouble(parts[9]));
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // 保存用户设置
+    public void saveUserSettings(User user) {
+        File inputFile = new File(SETTINGS_FILE);
+        File tempFile = new File("settings_temp.csv");
+
+        List<String> lines = new ArrayList<>();
+        boolean found = false;
+        try (BufferedReader br = new BufferedReader(new FileReader(inputFile))) {
+            String line = br.readLine();
+            if (line != null) { // 写入标题行
+                lines.add(line);
+            }
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 10 && parts[0].equals(user.getUsername())) {
+                    // 更新现有设置
+                    lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + "," + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget() + "," + user.getDietBudget() + "," + user.getAmusementBudget() + "," + user.getSavedAmount() + "," + user.getAnnualSavedAmount());
+                    found = true;
+                } else {
+                    lines.add(line);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if (!found) {
+            lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + "," + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget() + "," + user.getDietBudget() + "," + user.getAmusementBudget() + "," + user.getSavedAmount() + "," + user.getAnnualSavedAmount());
+        }
+
+        // 将修改后的内容写入临时文件
+        try (PrintWriter writer = new PrintWriter(new FileWriter(tempFile))) {
+            for (String l : lines) {
+                writer.println(l);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return;
+        }
+
+        // 删除原始文件，并将临时文件重命名
+        if (!inputFile.delete()) {
+            System.out.println("Could not delete original file.");
+            return;
+        }
+        if (!tempFile.renameTo(inputFile)) {
+            System.out.println("Could not rename temp file.");
+            return;
+        }
     }
 }
