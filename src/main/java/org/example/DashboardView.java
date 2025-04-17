@@ -84,6 +84,7 @@ public class DashboardView extends Application {
                     try {
                         Stage formattedStage = new Stage();
                         formattedInput.start(formattedStage);
+                        primaryStage.close();
                     } catch (Exception ex) {
                         ex.printStackTrace();
                     }
@@ -100,6 +101,7 @@ public class DashboardView extends Application {
                     transactionStage.setTitle("交易记录查看器");
                     // 启动页面
                     transactionViewer.start(transactionStage);
+                    primaryStage.close();
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
