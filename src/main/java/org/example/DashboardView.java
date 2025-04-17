@@ -42,6 +42,11 @@ public class DashboardView extends Application {
         currentUser = user;
     }
 
+    /** 让其它类可以拿到当前用户 */
+    public static User getCurrentUser() {
+        return currentUser;
+    }
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         // 检查是否有用户登录
