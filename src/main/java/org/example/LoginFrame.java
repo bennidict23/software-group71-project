@@ -1,5 +1,7 @@
 package org.example;
 
+import org.example.list.TransactionViewer;
+
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;

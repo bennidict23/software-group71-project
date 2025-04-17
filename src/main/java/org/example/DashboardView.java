@@ -1,5 +1,7 @@
 package org.example;
 
+import org.example.list.TransactionViewer;
+
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -69,6 +71,7 @@ public class DashboardView extends Application {
         // 创建页面导航下拉框，并放在顶部
         pageSelector = new ComboBox<>();
         pageSelector.getItems().addAll("Formatted Input");
+        pageSelector.getItems().addAll("Transaction Viewer");
         pageSelector.setPromptText("Select a page...");
         pageSelector.setOnAction(e -> {
             String selectedPage = pageSelector.getValue();
@@ -81,13 +84,30 @@ public class DashboardView extends Application {
                     try {
                         Stage formattedStage = new Stage();
                         formattedInput.start(formattedStage);
+                        primaryStage.close();
                     } catch (Exception ex) {
                         ex.printStackTrace();
                     }
                 }
             }
+            // 新增交易查看器页面逻辑
+            else if ("Transaction Viewer".equals(selectedPage)) { 
+                try {
+                    // 创建新窗口
+                    Stage transactionStage = new Stage();
+                    // 初始化交易查看器
+                    TransactionViewer transactionViewer = new TransactionViewer();
+                    // 设置窗口标题
+                    transactionStage.setTitle("交易记录查看器");
+                    // 启动页面
+                    transactionViewer.start(transactionStage);
+                    primaryStage.close();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
             // 可根据需要重新设置下拉框为当前页面
-            pageSelector.setValue("Formatted Input");
+            pageSelector.setValue(selectedPage);
         });
         HBox navigationBox = new HBox(pageSelector);
         navigationBox.setAlignment(Pos.TOP_CENTER);
