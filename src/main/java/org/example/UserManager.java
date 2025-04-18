@@ -1,6 +1,7 @@
 package org.example;
 
 import java.io.*;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,7 +22,7 @@ public class UserManager {
         file = new File(SETTINGS_FILE);
         if (!file.exists()) {
             try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
-                writer.println("username,annualTarget,monthlyTarget,monthlyBudget,shoppingBudget,transportBudget,dietBudget,amusementBudget,savedAmount,annualSavedAmount");
+                writer.println("username,annualTarget,monthlyTarget,monthlyBudget,shoppingBudget,transportBudget,dietBudget,amusementBudget,savedAmount,annualSavedAmount,currentYear,currentMonth");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -125,23 +126,37 @@ public class UserManager {
         return false;
     }
 
-    // 加载用户设置
+    // 修改 UserManager 类中的 loadUserSettings 方法
     public void loadUserSettings(User user) {
         try (BufferedReader br = new BufferedReader(new FileReader(SETTINGS_FILE))) {
             String line;
             br.readLine(); // 跳过标题行
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
-                if (parts.length >= 10 && parts[0].equals(user.getUsername())) {
-                    user.setAnnualTarget(Double.parseDouble(parts[1]));
-                    user.setMonthlyTarget(Double.parseDouble(parts[2]));
-                    user.setMonthlyBudget(Double.parseDouble(parts[3]));
-                    user.setShoppingBudget(Double.parseDouble(parts[4]));
-                    user.setTransportBudget(Double.parseDouble(parts[5]));
-                    user.setDietBudget(Double.parseDouble(parts[6]));
-                    user.setAmusementBudget(Double.parseDouble(parts[7]));
-                    user.setSavedAmount(Double.parseDouble(parts[8]));
-                    user.setAnnualSavedAmount(Double.parseDouble(parts[9]));
+                if (parts.length >= 12 && parts[0].equals(user.getUsername())) {
+                    int currentYear = LocalDate.now().getYear(); // 获取当前年份
+                    int userYear = Integer.parseInt(parts[10]); // 获取用户设置中的年份
+
+                    // 如果当前年份与用户设置中的年份不一致，重置年储蓄目标
+                    if (currentYear != userYear) {
+                        user.setAnnualTarget(0.0); // 重置年储蓄目标
+                        user.setAnnualSavedAmount(0.0); // 重置年已储蓄金额
+                        user.setCurrentYear(currentYear); // 更新年份为当前年份
+                        saveUserSettings(user); // 保存更新后的设置
+                    } else {
+                        // 如果年份一致，加载用户设置
+                        user.setAnnualTarget(Double.parseDouble(parts[1]));
+                        user.setMonthlyTarget(Double.parseDouble(parts[2]));
+                        user.setMonthlyBudget(Double.parseDouble(parts[3]));
+                        user.setShoppingBudget(Double.parseDouble(parts[4]));
+                        user.setTransportBudget(Double.parseDouble(parts[5]));
+                        user.setDietBudget(Double.parseDouble(parts[6]));
+                        user.setAmusementBudget(Double.parseDouble(parts[7]));
+                        user.setSavedAmount(Double.parseDouble(parts[8]));
+                        user.setAnnualSavedAmount(Double.parseDouble(parts[9]));
+                        user.setCurrentYear(Integer.parseInt(parts[10]));
+                        user.setCurrentMonth(Integer.parseInt(parts[11]));
+                    }
                 }
             }
         } catch (IOException e) {
@@ -163,9 +178,9 @@ public class UserManager {
             }
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
-                if (parts.length >= 10 && parts[0].equals(user.getUsername())) {
+                if (parts.length >= 12 && parts[0].equals(user.getUsername())) {
                     // 更新现有设置
-                    lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + "," + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget() + "," + user.getDietBudget() + "," + user.getAmusementBudget() + "," + user.getSavedAmount() + "," + user.getAnnualSavedAmount());
+                    lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + "," + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget() + "," + user.getDietBudget() + "," + user.getAmusementBudget() + "," + user.getSavedAmount() + "," + user.getAnnualSavedAmount() + "," + user.getCurrentYear() + "," + user.getCurrentMonth());
                     found = true;
                 } else {
                     lines.add(line);
@@ -176,7 +191,7 @@ public class UserManager {
         }
 
         if (!found) {
-            lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + "," + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget() + "," + user.getDietBudget() + "," + user.getAmusementBudget() + "," + user.getSavedAmount() + "," + user.getAnnualSavedAmount());
+            lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + "," + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget() + "," + user.getDietBudget() + "," + user.getAmusementBudget() + "," + user.getSavedAmount() + "," + user.getAnnualSavedAmount() + "," + user.getCurrentYear() + "," + user.getCurrentMonth());
         }
 
         // 将修改后的内容写入临时文件
@@ -197,6 +212,27 @@ public class UserManager {
         if (!tempFile.renameTo(inputFile)) {
             System.out.println("Could not rename temp file.");
             return;
+        }
+    }
+
+    // 新增方法：检查并重置月储蓄目标和月预算
+    public void checkAndResetMonthlySettings(User user) {
+        int currentYear = LocalDate.now().getYear();
+        int currentMonth = LocalDate.now().getMonthValue();
+
+        // 打印当前的年份和月份
+//        System.out.println("Current Year: " + currentYear);
+//        System.out.println("Current Month: " + currentMonth);
+//
+//        // 打印用户的当前年份和月份
+//        System.out.println("User's Current Year: " + user.getCurrentYear());
+//        System.out.println("User's Current Month: " + user.getCurrentMonth());
+
+        if (user.getCurrentYear() != currentYear || user.getCurrentMonth() != currentMonth) {
+            user.resetMonthlySettings();
+            user.setCurrentYear(currentYear);
+            user.setCurrentMonth(currentMonth);
+            saveUserSettings(user); // 保存更新后的设置
         }
     }
 }
