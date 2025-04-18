@@ -60,12 +60,14 @@ public class UserManager {
     public User getUser(String username) {
         try (BufferedReader br = new BufferedReader(new FileReader(USERS_FILE))) {
             String line;
-            br.readLine(); // 跳过标题行
+            // 跳过标题行
+            br.readLine();
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
                 if (parts.length >= 2 && parts[0].equals(username)) {
                     User user = new User(parts[0], parts[1]);
-                    loadUserSettings(user); // 确保加载用户设置
+                    // 确保加载用户设置
+                    loadUserSettings(user);
                     return user;
                 }
             }
@@ -142,19 +144,25 @@ public class UserManager {
     public void loadUserSettings(User user) {
         try (BufferedReader br = new BufferedReader(new FileReader(SETTINGS_FILE))) {
             String line;
-            br.readLine(); // 跳过标题行
+            br.readLine();
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
                 if (parts.length >= 12 && parts[0].equals(user.getUsername())) {
-                    int currentYear = LocalDate.now().getYear(); // 获取当前年份
-                    int userYear = Integer.parseInt(parts[10]); // 获取用户设置中的年份
+                    // 获取当前年份
+                    int currentYear = LocalDate.now().getYear();
+                    // 获取用户设置中的年份
+                    int userYear = Integer.parseInt(parts[10]);
 
                     // 如果当前年份与用户设置中的年份不一致，重置年储蓄目标
                     if (currentYear != userYear) {
-                        user.setAnnualTarget(0.0); // 重置年储蓄目标
-                        user.setAnnualSavedAmount(0.0); // 重置年已储蓄金额
-                        user.setCurrentYear(currentYear); // 更新年份为当前年份
-                        saveUserSettings(user); // 保存更新后的设置
+                        // 重置年储蓄目标
+                        user.setAnnualTarget(0.0);
+                        // 重置年已储蓄金额
+                        user.setAnnualSavedAmount(6000.0);
+                        // 更新年份为当前年份
+                        user.setCurrentYear(currentYear);
+                        // 保存更新后的设置
+                        saveUserSettings(user);
                     } else {
                         // 如果年份一致，加载用户设置
                         user.setAnnualTarget(Double.parseDouble(parts[1]));
