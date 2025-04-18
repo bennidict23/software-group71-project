@@ -251,7 +251,7 @@ public class UserManager {
     // 新增方法：根据交易记录更新用户的 savedAmount 和 annualSavedAmount
     public void updateUserSavedAmount(User user) {
         String username = user.getUsername();
-        double totalSpent = 0.0;
+        double yearlySpent = 0.0;
         double monthlySpent = 0.0;
 
         try (BufferedReader br = new BufferedReader(new FileReader(TRANSACTION_FILE))) {
@@ -274,7 +274,7 @@ public class UserManager {
                     }
 
                     // 累加所有交易
-                    totalSpent += amount;
+                    yearlySpent += amount;
                 }
             }
         } catch (IOException e) {
@@ -283,7 +283,7 @@ public class UserManager {
 
         // 更新 savedAmount 和 annualSavedAmount
         user.setSavedAmount(user.getSavedAmount() - monthlySpent);
-        user.setAnnualSavedAmount(user.getAnnualSavedAmount() - totalSpent);
+        user.setAnnualSavedAmount(user.getAnnualSavedAmount() - yearlySpent);
 
         // 保存更新后的设置
         saveUserSettings(user);
