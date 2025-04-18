@@ -142,6 +142,6 @@ public class User {
         this.transportBudget = 0.0;
         this.dietBudget = 0.0;
         this.amusementBudget = 0.0;
-        this.savedAmount = 0.0;
+        this.savedAmount = 1500.0;
     }
 }
