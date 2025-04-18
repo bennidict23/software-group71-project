@@ -1,5 +1,7 @@
 package org.example;
 
+import java.time.LocalDate;
+
 public class User {
     private String username;
     private String password;
@@ -10,21 +12,25 @@ public class User {
     private double transportBudget;
     private double dietBudget;
     private double amusementBudget;
-    private double savedAmount; // 添加当前存款金额字段
-    private double annualSavedAmount; // 添加年度存款金额字段
+    private double savedAmount;
+    private double annualSavedAmount;
+    private int currentYear;
+    private int currentMonth;
 
     public User(String username, String password) {
         this.username = username;
         this.password = password;
-        this.annualTarget = 20000.0; // 默认值
-        this.monthlyTarget = 5000.0; // 默认值
-        this.monthlyBudget = 0.0; // 默认值
-        this.shoppingBudget = 0.0; // 默认值
-        this.transportBudget = 0.0; // 默认值
-        this.dietBudget = 0.0; // 默认值
-        this.amusementBudget = 0.0; // 默认值
-        this.savedAmount = 1500.0; // 默认值
-        this.annualSavedAmount = 6000.0; // 默认值
+        this.annualTarget = 20000.0;
+        this.monthlyTarget = 5000.0;
+        this.monthlyBudget = 0.0;
+        this.shoppingBudget = 0.0;
+        this.transportBudget = 0.0;
+        this.dietBudget = 0.0;
+        this.amusementBudget = 0.0;
+        this.savedAmount = 1500.0;
+        this.annualSavedAmount = 6000.0;
+        this.currentYear = LocalDate.now().getYear();
+        this.currentMonth = LocalDate.now().getMonthValue();
     }
 
     // Getters and Setters for all fields
@@ -110,5 +116,32 @@ public class User {
 
     public void setAnnualSavedAmount(double annualSavedAmount) {
         this.annualSavedAmount = annualSavedAmount;
+    }
+
+    public int getCurrentYear() {
+        return currentYear;
+    }
+
+    public int getCurrentMonth() {
+        return currentMonth;
+    }
+
+    public void setCurrentYear(int currentYear) {
+        this.currentYear = currentYear;
+    }
+
+    public void setCurrentMonth(int currentMonth) {
+        this.currentMonth = currentMonth;
+    }
+
+    // 新增方法：重置月储蓄目标和月预算
+    public void resetMonthlySettings() {
+        this.monthlyTarget = 0.0;
+        this.monthlyBudget = 0.0;
+        this.shoppingBudget = 0.0;
+        this.transportBudget = 0.0;
+        this.dietBudget = 0.0;
+        this.amusementBudget = 0.0;
+        this.savedAmount = 0.0;
     }
 }
