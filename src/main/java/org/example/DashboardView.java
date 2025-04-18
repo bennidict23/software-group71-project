@@ -10,31 +10,54 @@ import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import org.example.list.TransactionViewer;
 
+/**
+ * DashboardView 类，用于创建用户仪表盘界面。
+ * 该界面展示用户的基本信息、预算、储蓄目标等，并提供页面切换、密码修改、目标设置等功能。
+ */
 public class DashboardView extends Application {
 
+    // 当前登录用户，静态变量，方便在类的其他方法中访问
     private static User currentUser;
+    // 用户管理对象，用于处理用户相关操作
     private UserManager userManager = new UserManager();
 
+    // 界面中的一些组件，用于展示和操作用户信息
     private Label passwordLabel;
     private Label budgetLabel;
     private Label goalLabel;
     private ProgressBar progressBar;
     private Label progressLabel;
 
+    // 页面选择下拉框，用于切换不同的功能页面
     private ComboBox<String> pageSelector;
 
+    // 格式化输入页面对象，用于处理格式化输入相关操作
     private FormattedInput formattedInput = null;
 
+    /**
+     * 设置当前用户，静态方法，方便从外部设置当前登录用户。
+     * @param user 当前登录用户
+     */
     public static void setCurrentUser(User user) {
         currentUser = user;
     }
 
+    /**
+     * 获取当前用户，静态方法，方便在类的其他方法中获取当前登录用户。
+     * @return 当前登录用户
+     */
     public static User getCurrentUser() {
         return currentUser;
     }
 
+    /**
+     * 启动仪表盘界面。
+     * @param primaryStage 主舞台
+     * @throws Exception 异常
+     */
     @Override
     public void start(Stage primaryStage) throws Exception {
+        // 如果当前用户为空，说明未登录，跳转到登录界面
         if (currentUser == null) {
             LoginFrame loginFrame = new LoginFrame();
             Stage loginStage = new Stage();
@@ -47,21 +70,23 @@ public class DashboardView extends Application {
             return;
         }
 
-        // 检查并重置月储蓄目标和月预算
+        // 检查并重置月储蓄目标和月预算，确保数据的准确性
         userManager.checkAndResetMonthlySettings(currentUser);
 
-        // 更新用户的 savedAmount 和 annualSavedAmount
+        // 更新用户的 savedAmount 和 annualSavedAmount，保持数据的实时性
         userManager.updateUserSavedAmount(currentUser);
 
-        // 检查本月消费情况
+        // 检查本月消费情况，为后续的预算和目标展示提供数据支持
         userManager.checkMonthlyExpenses(currentUser);
 
         primaryStage.setTitle("User Dashboard");
 
+        // 如果 formattedInput 对象为空，进行初始化
         if (formattedInput == null) {
             formattedInput = new FormattedInput();
         }
 
+        // 初始化页面选择下拉框，添加页面选项，并设置页面切换逻辑
         pageSelector = new ComboBox<>();
         pageSelector.getItems().addAll("Formatted Input", "Transaction Viewer");
         pageSelector.setPromptText("Select a page...");
@@ -93,13 +118,16 @@ public class DashboardView extends Application {
             }
             pageSelector.setValue(selectedPage);
         });
+        // 创建导航栏布局，包含页面选择下拉框
         HBox navigationBox = new HBox(pageSelector);
         navigationBox.setAlignment(Pos.TOP_CENTER);
         navigationBox.setPadding(new Insets(10));
 
+        // 创建标题标签
         Label titleLabel = new Label("Dashboard");
         titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
 
+        // 创建个人信息区域，展示账户信息，并提供密码修改和登出功能
         Label accountLabel = new Label("Account: " + (currentUser != null ? currentUser.getUsername() : "N/A"));
         passwordLabel = new Label("Password: " + (currentUser != null ? currentUser.getPassword() : "N/A"));
         Button btnChangePassword = new Button("Change Password");
@@ -111,6 +139,7 @@ public class DashboardView extends Application {
         personalInfoBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
         personalInfoBox.setPrefSize(300, 100);
 
+        // 创建预算和目标区域，展示月预算、月储蓄目标、储蓄进度等信息，并提供目标设置和预算设置功能
         budgetLabel = new Label("Monthly Budget: $" + currentUser.getMonthlyBudget());
         goalLabel = new Label("Monthly Savings Goal: $" + currentUser.getMonthlyTarget());
         progressBar = new ProgressBar(currentUser.getSavedAmount() / currentUser.getMonthlyTarget());
@@ -126,6 +155,7 @@ public class DashboardView extends Application {
         budgetBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
         budgetBox.setPrefSize(300, 250);
 
+        // 创建消费趋势区域，预留位置用于展示消费趋势图表等信息
         HBox topBox = new HBox(20, personalInfoBox, budgetBox);
         topBox.setAlignment(Pos.TOP_CENTER);
         topBox.setPadding(new Insets(10));
@@ -142,20 +172,27 @@ public class DashboardView extends Application {
         imageBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
         imageBox.setPrefSize(300, 300);
 
+        // 将各个区域组合到主布局中
         VBox mainLayout = new VBox(20, navigationBox, titleLabel, topBox, imageBox);
         mainLayout.setAlignment(Pos.CENTER);
         mainLayout.setPadding(new Insets(20));
 
+        // 创建场景并设置到主舞台
         Scene scene = new Scene(mainLayout, 1000, 800);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
 
+    /**
+     * 显示密码修改对话框。
+     * @param owner 父级舞台
+     */
     private void showChangePasswordDialog(Stage owner) {
         Stage dialog = new Stage();
         dialog.setTitle("Change Password");
         dialog.initOwner(owner);
 
+        // 创建密码修改表单布局
         GridPane grid = new GridPane();
         grid.setPadding(new Insets(10));
         grid.setHgap(10);
@@ -176,6 +213,7 @@ public class DashboardView extends Application {
         grid.add(confirmPassField, 1, 1);
         grid.add(btnSubmit, 1, 2);
 
+        // 设置密码修改提交逻辑
         btnSubmit.setOnAction(e -> {
             String newPass = newPassField.getText();
             String confirmPass = confirmPassField.getText();
@@ -201,11 +239,16 @@ public class DashboardView extends Application {
         dialog.show();
     }
 
+    /**
+     * 显示目标设置对话框。
+     * @param owner 父级舞台
+     */
     private void showGoalDialog(Stage owner) {
         Stage dialog = new Stage();
         dialog.setTitle("Set Goal");
         dialog.initOwner(owner);
 
+        // 创建年度储蓄进度展示区域
         ProgressBar annualProgressBar = new ProgressBar(currentUser.getAnnualSavedAmount() / currentUser.getAnnualTarget());
         annualProgressBar.setPrefWidth(550);
         int initPercent = (int) (currentUser.getAnnualSavedAmount() / currentUser.getAnnualTarget() * 100);
@@ -214,6 +257,7 @@ public class DashboardView extends Application {
         progressBox.setAlignment(Pos.CENTER);
         progressBox.setPadding(new Insets(10));
 
+        // 创建年度目标设置区域
         Label annualLabel = new Label("Annual Target:");
         TextField annualField = new TextField(String.valueOf(currentUser.getAnnualTarget()));
         Label annualRemarkLabel = new Label("Remark:");
@@ -225,6 +269,7 @@ public class DashboardView extends Application {
         annualBox.setPadding(new Insets(10));
         annualBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
 
+        // 创建月目标设置区域
         Label monthlyLabel = new Label("Monthly Target:");
         TextField monthlyField = new TextField(String.valueOf(currentUser.getMonthlyTarget()));
         Label monthlyRemarkLabel = new Label("Remark:");
@@ -236,6 +281,7 @@ public class DashboardView extends Application {
         monthlyBox.setPadding(new Insets(10));
         monthlyBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
 
+        // 将年度和月目标设置区域组合到一起
         HBox inputRow = new HBox(20, annualBox, monthlyBox);
         inputRow.setAlignment(Pos.CENTER);
         inputRow.setPadding(new Insets(10));
@@ -248,6 +294,7 @@ public class DashboardView extends Application {
         dialog.setScene(scene);
         dialog.show();
 
+        // 设置年度目标设置按钮的点击逻辑
         annualSetButton.setOnAction(e -> {
             try {
                 double newAnnual = Double.parseDouble(annualField.getText());
@@ -267,6 +314,7 @@ public class DashboardView extends Application {
             }
         });
 
+        // 设置月目标设置按钮的点击逻辑
         monthlySetButton.setOnAction(e -> {
             try {
                 double newMonthly = Double.parseDouble(monthlyField.getText());
@@ -287,17 +335,23 @@ public class DashboardView extends Application {
         });
     }
 
+    /**
+     * 显示预算设置对话框。
+     * @param owner 父级舞台
+     */
     private void showBudgetDialog(Stage owner) {
         Stage dialog = new Stage();
         dialog.setTitle("Set Budget");
         dialog.initOwner(owner);
 
+        // 创建预算设置表单布局
         GridPane grid = new GridPane();
         grid.setPadding(new Insets(10));
         grid.setHgap(20);
         grid.setVgap(20);
         grid.setAlignment(Pos.CENTER);
 
+        // 创建购物预算设置区域
         VBox shoppingBox = new VBox(10);
         shoppingBox.setAlignment(Pos.CENTER_LEFT);
         shoppingBox.setPadding(new Insets(10));
@@ -312,6 +366,7 @@ public class DashboardView extends Application {
 
         shoppingBox.getChildren().addAll(shoppingLabel, shoppingField, shoppingRemarkLabel, shoppingRemarkField, shoppingSetButton);
 
+        // 创建交通预算设置区域
         VBox transportBox = new VBox(10);
         transportBox.setAlignment(Pos.CENTER_LEFT);
         transportBox.setPadding(new Insets(10));
@@ -326,6 +381,7 @@ public class DashboardView extends Application {
 
         transportBox.getChildren().addAll(transportLabel, transportField, transportRemarkLabel, transportRemarkField, transportSetButton);
 
+        // 创建饮食预算设置区域
         VBox dietBox = new VBox(10);
         dietBox.setAlignment(Pos.CENTER_LEFT);
         dietBox.setPadding(new Insets(10));
@@ -340,6 +396,7 @@ public class DashboardView extends Application {
 
         dietBox.getChildren().addAll(dietLabel, dietField, dietRemarkLabel, dietRemarkField, dietSetButton);
 
+        // 创建娱乐预算设置区域
         VBox amusementBox = new VBox(10);
         amusementBox.setAlignment(Pos.CENTER_LEFT);
         amusementBox.setPadding(new Insets(10));
@@ -354,6 +411,7 @@ public class DashboardView extends Application {
 
         amusementBox.getChildren().addAll(amusementLabel, amusementField, amusementRemarkLabel, amusementRemarkField, amusementSetButton);
 
+        // 将各个预算设置区域组合到表单布局中
         grid.add(shoppingBox, 0, 0);
         grid.add(transportBox, 1, 0);
         grid.add(dietBox, 0, 1);
@@ -363,6 +421,7 @@ public class DashboardView extends Application {
         dialog.setScene(scene);
         dialog.show();
 
+        // 设置购物预算设置按钮的点击逻辑
         shoppingSetButton.setOnAction(e -> {
             try {
                 double newBudget = Double.parseDouble(shoppingField.getText());
@@ -385,6 +444,7 @@ public class DashboardView extends Application {
             }
         });
 
+        // 设置交通预算设置按钮的点击逻辑
         transportSetButton.setOnAction(e -> {
             try {
                 double newBudget = Double.parseDouble(transportField.getText());
@@ -407,6 +467,7 @@ public class DashboardView extends Application {
             }
         });
 
+        // 设置饮食预算设置按钮的点击逻辑
         dietSetButton.setOnAction(e -> {
             try {
                 double newBudget = Double.parseDouble(dietField.getText());
@@ -429,6 +490,7 @@ public class DashboardView extends Application {
             }
         });
 
+        // 设置娱乐预算设置按钮的点击逻辑
         amusementSetButton.setOnAction(e -> {
             try {
                 double newBudget = Double.parseDouble(amusementField.getText());
@@ -452,6 +514,12 @@ public class DashboardView extends Application {
         });
     }
 
+    /**
+     * 显示提示对话框。
+     * @param type 对话框类型
+     * @param title 对话框标题
+     * @param message 对话框内容
+     */
     private void showAlert(Alert.AlertType type, String title, String message) {
         Alert alert = new Alert(type);
         alert.setTitle(title);
@@ -460,6 +528,10 @@ public class DashboardView extends Application {
         alert.showAndWait();
     }
 
+    /**
+     * 用户登出逻辑。
+     * @param primaryStage 主舞台
+     */
     private void logout(Stage primaryStage) {
         DashboardView.currentUser = null;
         primaryStage.close();
