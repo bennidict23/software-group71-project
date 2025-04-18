@@ -50,6 +50,12 @@ public class DashboardView extends Application {
         // 检查并重置月储蓄目标和月预算
         userManager.checkAndResetMonthlySettings(currentUser);
 
+        // 更新用户的 savedAmount 和 annualSavedAmount
+        userManager.updateUserSavedAmount(currentUser);
+
+        // 检查本月消费情况
+        userManager.checkMonthlyExpenses(currentUser);
+
         primaryStage.setTitle("User Dashboard");
 
         if (formattedInput == null) {
