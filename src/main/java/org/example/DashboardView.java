@@ -139,12 +139,12 @@ public class DashboardView extends Application {
                     // 打开Analysis页面
                     Stage analysisStage = new Stage();
                     analysisStage.setTitle("Data Analysis");
-                    // TODO: 实现Analysis页面后替换这里
-                    showAlert(Alert.AlertType.INFORMATION, "Coming Soon", "Analysis page is under development");
-                    // analysisStage.show();
-                    // primaryStage.close();
+                    // 使用AnalysisView
+                    new org.example.analysis.AnalysisView().start(analysisStage);
+                    primaryStage.close();
                 } catch (Exception ex) {
                     ex.printStackTrace();
+                    showAlert(Alert.AlertType.ERROR, "Error", "Failed to open Analysis page: " + ex.getMessage());
                 }
             }
             pageSelector.setValue(selectedPage);
