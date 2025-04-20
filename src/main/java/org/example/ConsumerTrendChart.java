@@ -54,11 +54,11 @@ public class ConsumerTrendChart {
             String line = br.readLine(); // Skip header
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
-                if (parts.length >= 6) {
+                if (parts.length >= 7) {
                     // 获取交易记录中的用户信息
-                    String user = parts[0];
-                    LocalDate date = LocalDate.parse(parts[2], DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-                    double amount = Double.parseDouble(parts[3]);
+                    String user = parts[1];
+                    LocalDate date = LocalDate.parse(parts[3], DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                    double amount = Double.parseDouble(parts[4]);
 
                     // 只处理当前用户的记录
                     if (user.equals(currentUser.getUsername()) && !date.isBefore(sevenDaysAgo) && !date.isAfter(today)) {

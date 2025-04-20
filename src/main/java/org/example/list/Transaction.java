@@ -3,6 +3,7 @@ import javafx.beans.property.*;
 import java.time.LocalDate;
 
 public class Transaction {
+    private final IntegerProperty id;
     private final StringProperty user;
     private final StringProperty source;
     private final ObjectProperty<LocalDate> date;
@@ -10,8 +11,9 @@ public class Transaction {
     private final StringProperty category;
     private final StringProperty description;
 
-    public Transaction(String user, String source, LocalDate date,
+    public Transaction(int id, String user, String source, LocalDate date,
                       double amount, String category, String description) {
+        this.id = new SimpleIntegerProperty(id);
         this.user = new SimpleStringProperty(user);
         this.source = new SimpleStringProperty(source);
         this.date = new SimpleObjectProperty<>(date);
@@ -21,6 +23,7 @@ public class Transaction {
     }
 
     // JavaFX属性访问方法
+    public IntegerProperty idProperty() { return id; }
     public StringProperty userProperty() { return user; }
     public StringProperty sourceProperty() { return source; }
     public ObjectProperty<LocalDate> dateProperty() { return date; }
@@ -29,6 +32,7 @@ public class Transaction {
     public StringProperty descriptionProperty() { return description; }
 
     // 常规getter方法
+    public int getId() { return id.get(); }
     public String getUser() { return user.get(); }
     public String getSource() { return source.get(); }
     public LocalDate getDate() { return date.get(); }
