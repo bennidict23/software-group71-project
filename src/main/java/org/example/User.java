@@ -17,18 +17,19 @@ public class User {
     private int currentYear;
     private int currentMonth;
 
+
     public User(String username, String password) {
         this.username = username;
         this.password = password;
-        this.annualTarget = 20000.0;
-        this.monthlyTarget = 5000.0;
+        this.annualTarget = 0.0;
+        this.monthlyTarget = 0.0;
         this.monthlyBudget = 0.0;
         this.shoppingBudget = 0.0;
         this.transportBudget = 0.0;
         this.dietBudget = 0.0;
         this.amusementBudget = 0.0;
-        this.savedAmount = 1500.0;
-        this.annualSavedAmount = 6000.0;
+        this.savedAmount = 2000.0;
+        this.annualSavedAmount = 24000.0;
         this.currentYear = LocalDate.now().getYear();
         this.currentMonth = LocalDate.now().getMonthValue();
     }
@@ -134,7 +135,9 @@ public class User {
         this.currentMonth = currentMonth;
     }
 
-    // 新增方法：重置月储蓄目标和月预算
+
+
+    // 新增方法：重置月目标和月预算
     public void resetMonthlySettings() {
         this.monthlyTarget = 0.0;
         this.monthlyBudget = 0.0;
@@ -142,6 +145,16 @@ public class User {
         this.transportBudget = 0.0;
         this.dietBudget = 0.0;
         this.amusementBudget = 0.0;
-        this.savedAmount = 1500.0;
+    }
+
+    // 新增方法：重置年目标和年预算
+    public void resetAnnualSettings() {
+        this.annualTarget = 0.0;
+        this.monthlyTarget = 0.0;
+        this.monthlyBudget = 0.0;
+        this.shoppingBudget = 0.0;
+        this.transportBudget = 0.0;
+        this.dietBudget = 0.0;
+        this.amusementBudget = 0.0;
     }
 }

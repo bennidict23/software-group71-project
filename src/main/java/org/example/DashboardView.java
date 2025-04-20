@@ -1,19 +1,23 @@
 package org.example;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.LineChart;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import org.example.list.TransactionViewer;
 
-/**
- * DashboardView 类，用于创建用户仪表盘界面。
- * 该界面展示用户的基本信息、预算、储蓄目标等，并提供页面切换、密码修改、目标设置等功能。
- */
+import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 public class DashboardView extends Application {
 
     // 当前登录用户，静态变量，方便在类的其他方法中访问
@@ -33,6 +37,9 @@ public class DashboardView extends Application {
 
     // 格式化输入页面对象，用于处理格式化输入相关操作
     private FormattedInput formattedInput = null;
+
+    // 定时任务，用于定期更新 savedAmount 和 annualSavedAmount
+    private ScheduledExecutorService scheduler;
 
     /**
      * 设置当前用户，静态方法，方便从外部设置当前登录用户。
@@ -73,9 +80,6 @@ public class DashboardView extends Application {
         // 检查并重置月储蓄目标和月预算，确保数据的准确性
         userManager.checkAndResetMonthlySettings(currentUser);
 
-        // 更新用户的 savedAmount 和 annualSavedAmount，保持数据的实时性
-        userManager.updateUserSavedAmount(currentUser);
-
         // 检查本月消费情况，为后续的预算和目标展示提供数据支持
         userManager.checkMonthlyExpenses(currentUser);
 
@@ -98,20 +102,22 @@ public class DashboardView extends Application {
             if ("Formatted Input".equals(selectedPage)) {
                 if (formattedInput != null) {
                     try {
+                        // 这里不关闭 primaryStage，而是在新的窗口中打开 FormattedInput
                         Stage formattedStage = new Stage();
                         formattedInput.start(formattedStage);
-                        primaryStage.close();
+                        // 不关闭主舞台
                     } catch (Exception ex) {
                         ex.printStackTrace();
                     }
                 }
             } else if ("Transaction Viewer".equals(selectedPage)) {
                 try {
+                    // 这里不关闭 primaryStage，而是在新的窗口中打开 TransactionViewer
                     Stage transactionStage = new Stage();
                     TransactionViewer transactionViewer = new TransactionViewer();
                     transactionStage.setTitle("交易记录查看器");
                     transactionViewer.start(transactionStage);
-                    primaryStage.close();
+                    // 不关闭主舞台
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -159,14 +165,16 @@ public class DashboardView extends Application {
         HBox topBox = new HBox(20, personalInfoBox, budgetBox);
         topBox.setAlignment(Pos.TOP_CENTER);
         topBox.setPadding(new Insets(10));
+        // 创建 BarChart
+        BarChart<String, Number> barChart = new ConsumerTrendChart(currentUser).createChart();
 
-        ImageView imageView = new ImageView();
-        imageView.setFitHeight(200);
-        imageView.setFitWidth(200);
-        imageView.setStyle("-fx-border-color: gray; -fx-border-radius: 5px;");
-        Label imageTitleLabel = new Label("Consumer Trend");
-        imageTitleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
-        VBox imageBox = new VBox(10, imageTitleLabel, imageView);
+        // 创建 StackPane 并添加 BarChart
+        StackPane chartPane = new StackPane();
+        chartPane.getChildren().add(barChart);
+        chartPane.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+
+        // 将图表添加到消费趋势区域
+        VBox imageBox = new VBox(10, new Label("Consumer Trend"), chartPane);
         imageBox.setAlignment(Pos.TOP_CENTER);
         imageBox.setPadding(new Insets(10));
         imageBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
@@ -180,7 +188,39 @@ public class DashboardView extends Application {
         // 创建场景并设置到主舞台
         Scene scene = new Scene(mainLayout, 1000, 800);
         primaryStage.setScene(scene);
+
+        // 设置关闭窗口时的事件处理器
+        primaryStage.setOnCloseRequest(event -> {
+            try {
+                stop(); // 调用 stop 方法来停止程序
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
         primaryStage.show();
+
+        // 启动定时任务，每10秒更新一次 savedAmount 和 annualSavedAmount
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler.scheduleAtFixedRate(this::updateSavedAmounts, 0, 10, TimeUnit.SECONDS);
+    }
+
+    /**
+     * 更新 savedAmount 和 annualSavedAmount，并刷新界面显示。
+     */
+    private void updateSavedAmounts() {
+        // 调用 UserManager 的 checkTransactionsFile 方法更新 savedAmount 和 annualSavedAmount
+        userManager.checkTransactionsFile();
+
+        // 更新界面中的显示内容
+        Platform.runLater(() -> {
+            if (currentUser != null) {
+                budgetLabel.setText("Monthly Budget: $" + currentUser.getMonthlyBudget());
+                goalLabel.setText("Monthly Savings Goal: $" + currentUser.getMonthlyTarget());
+                progressBar.setProgress(currentUser.getSavedAmount() / currentUser.getMonthlyTarget());
+                progressLabel.setText("Savings Progress: " + (int) (currentUser.getSavedAmount() / currentUser.getMonthlyTarget() * 100) + "% (" + currentUser.getSavedAmount() + " saved)");
+            }
+        });
     }
 
     /**
@@ -542,5 +582,19 @@ public class DashboardView extends Application {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+    }
+
+    /**
+     * 在应用程序关闭时调用，确保定时任务能够优雅地停止。
+     */
+    @Override
+    public void stop() throws Exception {
+        super.stop();
+        userManager.shutdownScheduler(); // 关闭 UserManager 的定时任务
+        if (scheduler != null) {
+            scheduler.shutdown(); // 关闭 DashboardView 的定时任务
+        }
+        Platform.exit(); // 退出 JavaFX 应用程序
+        System.exit(0); // 停止执行程序
     }
 }
