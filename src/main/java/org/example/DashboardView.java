@@ -35,6 +35,14 @@ public class DashboardView extends Application {
     // 页面选择下拉框，用于切换不同的功能页面
     private ComboBox<String> pageSelector;
 
+    // 标记是否已导入过数据
+    private static boolean importDone = false;
+    /** 由外部（FormattedInput.importCSV）调用，标记已导入数据 */
+    public static void setImportDone(boolean done) {
+        importDone = done;
+    }
+
+
     // 格式化输入页面对象，用于处理格式化输入相关操作
     private FormattedInput formattedInput = null;
 
@@ -105,6 +113,7 @@ public class DashboardView extends Application {
                         // 这里不关闭 primaryStage，而是在新的窗口中打开 FormattedInput
                         Stage formattedStage = new Stage();
                         formattedInput.start(formattedStage);
+                        primaryStage.close();
                         // 不关闭主舞台
                     } catch (Exception ex) {
                         ex.printStackTrace();
@@ -117,6 +126,7 @@ public class DashboardView extends Application {
                     TransactionViewer transactionViewer = new TransactionViewer();
                     transactionStage.setTitle("交易记录查看器");
                     transactionViewer.start(transactionStage);
+                    primaryStage.close();
                     // 不关闭主舞台
                 } catch (Exception ex) {
                     ex.printStackTrace();
@@ -166,12 +176,15 @@ public class DashboardView extends Application {
         topBox.setAlignment(Pos.TOP_CENTER);
         topBox.setPadding(new Insets(10));
         // 创建 BarChart
-        BarChart<String, Number> barChart = new ConsumerTrendChart(currentUser).createChart();
+        LineChart<String, Number> lineChart = new ConsumerTrendChart(currentUser).createChart();
 
         // 创建 StackPane 并添加 BarChart
         StackPane chartPane = new StackPane();
-        chartPane.getChildren().add(barChart);
+        chartPane.getChildren().add(lineChart);
         chartPane.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+
+        chartPane.setVisible(importDone);
+        chartPane.managedProperty().bind(chartPane.visibleProperty());
 
         // 将图表添加到消费趋势区域
         VBox imageBox = new VBox(10, new Label("Consumer Trend"), chartPane);
