@@ -328,9 +328,9 @@ public class UserManager {
 
         for (String line : newTransactions) {
             String[] parts = line.split(",");
-            if (parts.length >= 6 && parts[0].equals(currentUser.getUsername())) {
-                double amount = Double.parseDouble(parts[3]);
-                String dateStr = parts[2];
+            if (parts.length >= 7 && parts[1].equals(currentUser.getUsername())) {
+                double amount = Double.parseDouble(parts[4]);
+                String dateStr = parts[3];
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 LocalDate date = LocalDate.parse(dateStr, formatter);
 
@@ -346,9 +346,9 @@ public class UserManager {
 
         for (String line : removedTransactions) {
             String[] parts = line.split(",");
-            if (parts.length >= 6 && parts[0].equals(currentUser.getUsername())) {
-                double amount = Double.parseDouble(parts[3]);
-                String dateStr = parts[2];
+            if (parts.length >= 7 && parts[1].equals(currentUser.getUsername())) {
+                double amount = Double.parseDouble(parts[4]);
+                String dateStr = parts[3];
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 LocalDate date = LocalDate.parse(dateStr, formatter);
 
@@ -412,15 +412,15 @@ public class UserManager {
             br.readLine(); // 跳过标题行
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
-                if (parts.length >= 6 && parts[0].equals(username)) {
-                    String dateStr = parts[2];
-                    double amount = Double.parseDouble(parts[3]);
-                    String category = parts[4];
+                if (parts.length >= 7 && parts[1].equals(username)) {
+                    String dateStr = parts[3];
+                    double amount = Double.parseDouble(parts[4]);
+                    String category = parts[5];
 
                     // 解析日期
-                    // 先把所有"/"换成"-"，再用 yyyy-M-d 模式解析单/双位的月日
+                    // 先把所有"/"换成"-"，再用 yyyy-MM-dd 模式解析日期
                     String normalized = dateStr.trim().replace('/', '-');
-                    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-M-d");
+                    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                     LocalDate date;
                     try {
                         date = LocalDate.parse(normalized, fmt);
