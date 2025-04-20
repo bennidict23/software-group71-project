@@ -19,6 +19,8 @@ import java.util.stream.Collectors;
 public class DataAnalysisController {
 
     private final DataAccessInterface dataAccess;
+    private final DeepSeekForecastClient forecastClient;
+    private boolean useAiForecasting = true;
 
     /**
      * Constructs a DataAnalysisController with the specified data access interface
@@ -27,6 +29,7 @@ public class DataAnalysisController {
      */
     public DataAnalysisController(DataAccessInterface dataAccess) {
         this.dataAccess = dataAccess;
+        this.forecastClient = new DeepSeekForecastClient();
     }
 
     /**
@@ -70,13 +73,67 @@ public class DataAnalysisController {
     }
 
     /**
-     * Analyzes spending trends and provides a forecast for future spending
+     * Analyzes spending trends and provides a forecast for future spending.
+     * If AI forecasting is enabled, uses DeepSeek API, otherwise uses simple trend
+     * analysis.
      * 
      * @param historicalMonths Number of months of historical data to use
      * @param forecastMonths   Number of months to forecast
      * @return Map with month names as keys and forecasted spending as values
      */
     public Map<String, Double> getForecastedSpending(int historicalMonths, int forecastMonths) {
+        // Get historical data
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minus(historicalMonths, ChronoUnit.MONTHS);
+        List<Transaction> transactions = dataAccess.getTransactions(startDate, endDate);
+
+        // 如果启用AI预测并且有交易数据，则使用DeepSeek API
+        if (useAiForecasting && !transactions.isEmpty()) {
+            try {
+                // 将月份转换为天数
+                int forecastDays = forecastMonths * 30;
+
+                // 获取AI预测
+                Map<String, Double> dailyForecast = forecastClient.getForecast(transactions, forecastDays);
+
+                // 转换为月度预测
+                return convertDailyToMonthlyForecast(dailyForecast);
+            } catch (Exception e) {
+                System.err.println("AI forecasting failed, falling back to trend-based forecast: " + e.getMessage());
+                // 出错时回退到传统预测
+                return getTrendBasedForecast(historicalMonths, forecastMonths);
+            }
+        } else {
+            // 使用传统的趋势分析预测
+            return getTrendBasedForecast(historicalMonths, forecastMonths);
+        }
+    }
+
+    /**
+     * Converts daily forecast to monthly forecast
+     */
+    private Map<String, Double> convertDailyToMonthlyForecast(Map<String, Double> dailyForecast) {
+        Map<String, Double> monthlyForecast = new HashMap<>();
+        DateTimeFormatter monthYearFormatter = DateTimeFormatter.ofPattern("MMM yyyy");
+
+        // 按月分组并计算总和
+        for (Map.Entry<String, Double> entry : dailyForecast.entrySet()) {
+            LocalDate date = LocalDate.parse(entry.getKey());
+            String monthYear = date.format(monthYearFormatter);
+
+            // 累加同一月份的金额
+            monthlyForecast.put(
+                    monthYear,
+                    monthlyForecast.getOrDefault(monthYear, 0.0) + entry.getValue());
+        }
+
+        return monthlyForecast;
+    }
+
+    /**
+     * Gets a trend-based forecast using simple statistical methods
+     */
+    private Map<String, Double> getTrendBasedForecast(int historicalMonths, int forecastMonths) {
         // Get historical data first
         Map<String, Double> historical = getHistoricalSpending(historicalMonths);
         Map<String, Double> forecast = new HashMap<>();
@@ -88,19 +145,102 @@ public class DataAnalysisController {
         }
         double avgMonthly = total / historical.size();
 
-        // Generate forecast data (with slight upward trend)
+        // 检测是否有季节性模式
+        boolean hasSeasonalPattern = detectSeasonalPattern(historical);
+
+        // Generate forecast data
         LocalDate today = LocalDate.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM yyyy");
+
         for (int i = 0; i < forecastMonths; i++) {
             LocalDate date = today.plus(i + 1, ChronoUnit.MONTHS);
-            String monthKey = date.getMonth().toString().substring(0, 3) + " " + date.getYear();
+            String monthKey = date.format(formatter);
 
-            // Add a slight upward trend and some randomness
-            double trendFactor = 1.0 + (i * 0.03); // 3% increase per month
-            double randomFactor = 0.9 + Math.random() * 0.2; // Random between 0.9 and 1.1
-            forecast.put(monthKey, avgMonthly * trendFactor * randomFactor);
+            // 基本趋势：每月增长3%
+            double trendFactor = 1.0 + (i * 0.03);
+
+            // 季节性因素
+            double seasonalFactor = 1.0;
+            if (hasSeasonalPattern) {
+                // 简单的季节性模型：节假日月份支出更高
+                int month = date.getMonthValue();
+                // 中国主要节日月份：1(春节)、5(五一)、10(国庆)
+                if (month == 1 || month == 5 || month == 10) {
+                    seasonalFactor = 1.2; // 节日月份支出增加20%
+                } else if (month == 2 || month == 6 || month == 11) {
+                    seasonalFactor = 1.1; // 节日后的月份支出略高
+                } else if (month == 7 || month == 8) {
+                    seasonalFactor = 1.15; // 暑假期间支出高
+                }
+            }
+
+            // 随机波动因素
+            double randomFactor = 0.95 + Math.random() * 0.1; // 0.95-1.05之间
+
+            // 计算预测值
+            forecast.put(monthKey, avgMonthly * trendFactor * seasonalFactor * randomFactor);
         }
 
         return forecast;
+    }
+
+    /**
+     * Detects if there is a seasonal pattern in the historical data
+     */
+    private boolean detectSeasonalPattern(Map<String, Double> historicalData) {
+        // 简单的季节性检测：检查是否有明显的月份间差异
+        if (historicalData.size() < 6) {
+            return false; // 数据不足以检测季节性
+        }
+
+        // 按月份分组
+        Map<Integer, List<Double>> monthlyGroupedData = new HashMap<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM yyyy");
+
+        for (Map.Entry<String, Double> entry : historicalData.entrySet()) {
+            try {
+                // 解析月份名称，如"Jan 2024"
+                String[] parts = entry.getKey().split(" ");
+                if (parts.length == 2) {
+                    LocalDate date = LocalDate.parse("01 " + entry.getKey(),
+                            DateTimeFormatter.ofPattern("dd MMM yyyy"));
+                    int month = date.getMonthValue();
+
+                    if (!monthlyGroupedData.containsKey(month)) {
+                        monthlyGroupedData.put(month, new ArrayList<>());
+                    }
+                    monthlyGroupedData.get(month).add(entry.getValue());
+                }
+            } catch (Exception e) {
+                // 解析错误，忽略
+            }
+        }
+
+        // 计算各月份的平均值
+        Map<Integer, Double> monthlyAverages = new HashMap<>();
+        for (Map.Entry<Integer, List<Double>> entry : monthlyGroupedData.entrySet()) {
+            double sum = 0;
+            for (Double value : entry.getValue()) {
+                sum += value;
+            }
+            monthlyAverages.put(entry.getKey(), sum / entry.getValue().size());
+        }
+
+        // 计算总体平均值
+        double overallAverage = 0;
+        for (Double value : monthlyAverages.values()) {
+            overallAverage += value;
+        }
+        overallAverage /= monthlyAverages.size();
+
+        // 检查是否有月份的平均值与总体平均值相差超过20%
+        for (Double monthlyAvg : monthlyAverages.values()) {
+            if (Math.abs(monthlyAvg - overallAverage) / overallAverage > 0.2) {
+                return true; // 检测到季节性
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -137,5 +277,23 @@ public class DataAnalysisController {
      */
     public List<String> getAllCategories() {
         return dataAccess.getCategories();
+    }
+
+    /**
+     * Enables or disables AI-powered forecasting
+     * 
+     * @param useAi Whether to use AI for forecasting
+     */
+    public void setUseAiForecasting(boolean useAi) {
+        this.useAiForecasting = useAi;
+    }
+
+    /**
+     * Checks if AI-powered forecasting is enabled
+     * 
+     * @return True if AI forecasting is enabled
+     */
+    public boolean isUsingAiForecasting() {
+        return useAiForecasting;
     }
 }
