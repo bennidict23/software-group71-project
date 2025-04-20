@@ -156,10 +156,25 @@ public class MockDataAccess implements DataAccessInterface {
                 return year1 - year2;
             }
 
-            Month month1 = Month.valueOf(parts1[0].toUpperCase() + parts1[0].substring(3).toLowerCase());
-            Month month2 = Month.valueOf(parts2[0].toUpperCase() + parts2[0].substring(3).toLowerCase());
+            // 使用月份映射表来避免枚举转换错误
+            Map<String, Integer> monthMap = new HashMap<>();
+            monthMap.put("JAN", 1);
+            monthMap.put("FEB", 2);
+            monthMap.put("MAR", 3);
+            monthMap.put("APR", 4);
+            monthMap.put("MAY", 5);
+            monthMap.put("JUN", 6);
+            monthMap.put("JUL", 7);
+            monthMap.put("AUG", 8);
+            monthMap.put("SEP", 9);
+            monthMap.put("OCT", 10);
+            monthMap.put("NOV", 11);
+            monthMap.put("DEC", 12);
 
-            return month1.compareTo(month2);
+            Integer month1Value = monthMap.get(parts1[0]);
+            Integer month2Value = monthMap.get(parts2[0]);
+
+            return month1Value.compareTo(month2Value);
         });
 
         // Convert back to map (LinkedHashMap to maintain order)

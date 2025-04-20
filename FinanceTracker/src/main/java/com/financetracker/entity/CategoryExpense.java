@@ -1,65 +1,94 @@
 package com.financetracker.entity;
 
 /**
- * Entity class representing an expense category with its total amount.
- * This is an entity class in the MVC pattern.
+ * 表示特定类别的开支数据
  */
 public class CategoryExpense {
     private String category;
     private double amount;
+    private String description;
 
     /**
-     * Constructs a CategoryExpense with the specified category and amount
-     * 
-     * @param category The expense category name
-     * @param amount   The total expense amount for this category
+     * 创建一个新的类别开支
+     *
+     * @param category 开支类别
+     * @param amount   开支金额
      */
     public CategoryExpense(String category, double amount) {
         this.category = category;
         this.amount = amount;
+        this.description = "";
     }
 
     /**
-     * Gets the category name
-     * 
-     * @return The category name
+     * 创建一个新的类别开支
+     *
+     * @param category    开支类别
+     * @param amount      开支金额
+     * @param description 描述信息
+     */
+    public CategoryExpense(String category, double amount, String description) {
+        this.category = category;
+        this.amount = amount;
+        this.description = description;
+    }
+
+    /**
+     * 获取开支类别
+     *
+     * @return 类别名称
      */
     public String getCategory() {
         return category;
     }
 
     /**
-     * Sets the category name
-     * 
-     * @param category The category name to set
+     * 设置开支类别
+     *
+     * @param category 类别名称
      */
     public void setCategory(String category) {
         this.category = category;
     }
 
     /**
-     * Gets the expense amount
-     * 
-     * @return The expense amount
+     * 获取开支金额
+     *
+     * @return 开支金额
      */
     public double getAmount() {
         return amount;
     }
 
     /**
-     * Sets the expense amount
-     * 
-     * @param amount The expense amount to set
+     * 设置开支金额
+     *
+     * @param amount 开支金额
      */
     public void setAmount(double amount) {
         this.amount = amount;
     }
 
+    /**
+     * 获取开支描述
+     *
+     * @return 描述信息
+     */
+    public String getDescription() {
+        return description;
+    }
+
+    /**
+     * 设置开支描述
+     *
+     * @param description 描述信息
+     */
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
     @Override
     public String toString() {
-        return "CategoryExpense{" +
-                "category='" + category + '\'' +
-                ", amount=" + amount +
-                '}';
+        return String.format("%s: %.2f", category, amount);
     }
 }

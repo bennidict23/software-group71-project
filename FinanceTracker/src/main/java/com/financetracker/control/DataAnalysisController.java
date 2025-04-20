@@ -22,6 +22,11 @@ public class DataAnalysisController {
     private final DeepSeekForecastClient forecastClient;
     private boolean useAiForecasting = true;
 
+    private static DataAnalysisController instance;
+
+    // 存储不同时间段的类别开支数据
+    private final Map<Integer, List<CategoryExpense>> periodExpenses;
+
     /**
      * Constructs a DataAnalysisController with the specified data access interface
      * 
@@ -30,6 +35,10 @@ public class DataAnalysisController {
     public DataAnalysisController(DataAccessInterface dataAccess) {
         this.dataAccess = dataAccess;
         this.forecastClient = new DeepSeekForecastClient();
+        periodExpenses = new HashMap<>();
+        periodExpenses.put(3, new ArrayList<>());
+        periodExpenses.put(6, new ArrayList<>());
+        periodExpenses.put(12, new ArrayList<>());
     }
 
     /**
@@ -38,7 +47,10 @@ public class DataAnalysisController {
      * @return A DataAnalysisController using mock data
      */
     public static DataAnalysisController getDefaultInstance() {
-        return new DataAnalysisController(new MockDataAccess());
+        if (instance == null) {
+            instance = new DataAnalysisController(new MockDataAccess());
+        }
+        return instance;
     }
 
     /**
@@ -295,5 +307,59 @@ public class DataAnalysisController {
      */
     public boolean isUsingAiForecasting() {
         return useAiForecasting;
+    }
+
+    /**
+     * 添加类别开支数据到指定的时间段
+     * 
+     * @param expense 类别开支数据
+     * @param period  时间段（月）
+     */
+    public void addCategoryExpense(CategoryExpense expense, int period) {
+        if (!periodExpenses.containsKey(period)) {
+            periodExpenses.put(period, new ArrayList<>());
+        }
+
+        // 检查是否已存在相同类别，如果存在则更新金额
+        boolean categoryExists = false;
+        for (CategoryExpense existing : periodExpenses.get(period)) {
+            if (existing.getCategory().equals(expense.getCategory())) {
+                existing.setAmount(expense.getAmount());
+                categoryExists = true;
+                break;
+            }
+        }
+
+        // 如果不存在则添加新的
+        if (!categoryExists) {
+            periodExpenses.get(period).add(expense);
+        }
+    }
+
+    /**
+     * 获取指定时间段的所有类别开支数据
+     * 
+     * @param period 时间段（月）
+     * @return 类别开支数据列表
+     */
+    public List<CategoryExpense> getCategoryExpenses(int period) {
+        return periodExpenses.getOrDefault(period, new ArrayList<>());
+    }
+
+    /**
+     * 根据类别获取指定时间段的开支数据
+     * 
+     * @param category 类别名称
+     * @param period   时间段（月）
+     * @return 开支金额，如果不存在则返回0
+     */
+    public double getExpenseForCategory(String category, int period) {
+        List<CategoryExpense> expenses = getCategoryExpenses(period);
+        for (CategoryExpense expense : expenses) {
+            if (expense.getCategory().equals(category)) {
+                return expense.getAmount();
+            }
+        }
+        return 0.0;
     }
 }
