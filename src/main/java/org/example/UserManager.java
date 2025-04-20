@@ -34,7 +34,8 @@ public class UserManager {
         file = new File(SETTINGS_FILE);
         if (!file.exists()) {
             try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
-                writer.println("username,annualTarget,monthlyTarget,monthlyBudget,shoppingBudget,transportBudget,dietBudget,amusementBudget,savedAmount,annualSavedAmount,currentYear,currentMonth");
+                writer.println(
+                        "username,annualTarget,monthlyTarget,monthlyBudget,shoppingBudget,transportBudget,dietBudget,amusementBudget,savedAmount,annualSavedAmount,currentYear,currentMonth");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -209,7 +210,11 @@ public class UserManager {
                 String[] parts = line.split(",");
                 if (parts.length >= 12 && parts[0].equals(user.getUsername())) {
                     // 更新现有设置
-                    lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + "," + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget() + "," + user.getDietBudget() + "," + user.getAmusementBudget() + "," + user.getSavedAmount() + "," + user.getAnnualSavedAmount() + "," + user.getCurrentYear() + "," + user.getCurrentMonth());
+                    lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + ","
+                            + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget()
+                            + "," + user.getDietBudget() + "," + user.getAmusementBudget() + "," + user.getSavedAmount()
+                            + "," + user.getAnnualSavedAmount() + "," + user.getCurrentYear() + ","
+                            + user.getCurrentMonth());
                     found = true;
                 } else {
                     lines.add(line);
@@ -220,7 +225,10 @@ public class UserManager {
         }
 
         if (!found) {
-            lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + "," + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget() + "," + user.getDietBudget() + "," + user.getAmusementBudget() + "," + user.getSavedAmount() + "," + user.getAnnualSavedAmount() + "," + user.getCurrentYear() + "," + user.getCurrentMonth());
+            lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + ","
+                    + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget() + ","
+                    + user.getDietBudget() + "," + user.getAmusementBudget() + "," + user.getSavedAmount() + ","
+                    + user.getAnnualSavedAmount() + "," + user.getCurrentYear() + "," + user.getCurrentMonth());
         }
 
         // 将修改后的内容写入临时文件
@@ -326,7 +334,8 @@ public class UserManager {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 LocalDate date = LocalDate.parse(dateStr, formatter);
 
-                if (date.getYear() == LocalDate.now().getYear() && date.getMonthValue() == LocalDate.now().getMonthValue()) {
+                if (date.getYear() == LocalDate.now().getYear()
+                        && date.getMonthValue() == LocalDate.now().getMonthValue()) {
                     newMonthlySpent += amount;
                 }
                 if (date.getYear() == LocalDate.now().getYear()) {
@@ -343,7 +352,8 @@ public class UserManager {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 LocalDate date = LocalDate.parse(dateStr, formatter);
 
-                if (date.getYear() == LocalDate.now().getYear() && date.getMonthValue() == LocalDate.now().getMonthValue()) {
+                if (date.getYear() == LocalDate.now().getYear()
+                        && date.getMonthValue() == LocalDate.now().getMonthValue()) {
                     removedMonthlySpent += amount;
                 }
                 if (date.getYear() == LocalDate.now().getYear()) {
@@ -408,7 +418,7 @@ public class UserManager {
                     String category = parts[4];
 
                     // 解析日期
-                    // 先把所有“/”换成“-”，再用 yyyy-M-d 模式解析单/双位的月日
+                    // 先把所有"/"换成"-"，再用 yyyy-M-d 模式解析单/双位的月日
                     String normalized = dateStr.trim().replace('/', '-');
                     DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-M-d");
                     LocalDate date;
@@ -419,9 +429,9 @@ public class UserManager {
                         continue;
                     }
 
-
                     // 检查是否为本月的交易
-                    if (date.getYear() == LocalDate.now().getYear() && date.getMonthValue() == LocalDate.now().getMonthValue()) {
+                    if (date.getYear() == LocalDate.now().getYear()
+                            && date.getMonthValue() == LocalDate.now().getMonthValue()) {
                         switch (category.toLowerCase()) {
                             case "shopping":
                                 shoppingSpent += amount;
@@ -446,19 +456,23 @@ public class UserManager {
 
         // 检查是否超过预算并发出警告
         if (shoppingSpent > user.getShoppingBudget()) {
-            showAlert("Warning", "Shopping budget exceeded: $" + shoppingSpent + " (Budget: $" + user.getShoppingBudget() + ")");
+            showAlert("Warning",
+                    "Shopping budget exceeded: $" + shoppingSpent + " (Budget: $" + user.getShoppingBudget() + ")");
         }
         if (transportSpent > user.getTransportBudget()) {
-            showAlert("Warning", "Transport budget exceeded: $" + transportSpent + " (Budget: $" + user.getTransportBudget() + ")");
+            showAlert("Warning",
+                    "Transport budget exceeded: $" + transportSpent + " (Budget: $" + user.getTransportBudget() + ")");
         }
         if (dietSpent > user.getDietBudget()) {
             showAlert("Warning", "Diet budget exceeded: $" + dietSpent + " (Budget: $" + user.getDietBudget() + ")");
         }
         if (amusementSpent > user.getAmusementBudget()) {
-            showAlert("Warning", "Amusement budget exceeded: $" + amusementSpent + " (Budget: $" + user.getAmusementBudget() + ")");
+            showAlert("Warning",
+                    "Amusement budget exceeded: $" + amusementSpent + " (Budget: $" + user.getAmusementBudget() + ")");
         }
         if (totalSpent > user.getMonthlyBudget()) {
-            showAlert("Warning", "Total monthly budget exceeded: $" + totalSpent + " (Budget: $" + user.getMonthlyBudget() + ")");
+            showAlert("Warning",
+                    "Total monthly budget exceeded: $" + totalSpent + " (Budget: $" + user.getMonthlyBudget() + ")");
         }
     }
 
@@ -475,5 +489,16 @@ public class UserManager {
         if (scheduler != null) {
             scheduler.shutdown();
         }
+    }
+
+    // 更新用户预算
+    public boolean updateUserBudget(String username, double newBudget) {
+        User user = getUser(username);
+        if (user != null) {
+            user.setMonthlyBudget(newBudget);
+            saveUserSettings(user);
+            return true;
+        }
+        return false;
     }
 }
