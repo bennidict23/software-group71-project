@@ -8,11 +8,14 @@ import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 
 import java.util.Map;
 
@@ -27,7 +30,9 @@ public class SpendingForecastView extends BorderPane {
     private ComboBox<String> historyPeriodComboBox;
     private ComboBox<String> forecastPeriodComboBox;
     private Button refreshButton;
+    private CheckBox useAiCheckBox;
     private DataAnalysisController controller;
+    private TextFlow aiStatusText;
 
     public SpendingForecastView() {
         controller = DataAnalysisController.getDefaultInstance();
@@ -55,15 +60,30 @@ public class SpendingForecastView extends BorderPane {
         forecastPeriodComboBox.setValue("Next 3 Months");
         forecastPeriodComboBox.setOnAction(e -> updateChart());
 
+        // AI 预测开关
+        useAiCheckBox = new CheckBox("Use AI Prediction");
+        useAiCheckBox.setSelected(controller.isUsingAiForecasting());
+        useAiCheckBox.setOnAction(e -> {
+            controller.setUseAiForecasting(useAiCheckBox.isSelected());
+            updateAiStatus();
+            updateChart();
+        });
+
         refreshButton = new Button("Refresh Data");
         refreshButton.setOnAction(e -> updateChart());
 
+        // AI状态文本
+        aiStatusText = new TextFlow();
+        updateAiStatus();
+        aiStatusText.setPadding(new Insets(5, 0, 0, 0));
+
         // Control panel layout
         HBox controlsBox = new HBox(10);
-        controlsBox.setPadding(new Insets(10, 0, 20, 0));
+        controlsBox.setPadding(new Insets(10, 0, 5, 0));
         controlsBox.getChildren().addAll(
                 historyLabel, historyPeriodComboBox,
                 forecastLabel, forecastPeriodComboBox,
+                useAiCheckBox,
                 refreshButton);
 
         // Chart setup
@@ -81,15 +101,39 @@ public class SpendingForecastView extends BorderPane {
         // Description
         Label descriptionLabel = new Label(
                 "This chart shows your historical spending patterns and forecasts future spending based on trends. " +
-                        "The forecast uses historical data and applies trend analysis to predict future spending levels.");
+                        "When AI prediction is enabled, the forecast considers seasonal factors and Chinese holidays.");
         descriptionLabel.setWrapText(true);
         descriptionLabel.setPadding(new Insets(20, 0, 0, 0));
 
         // Main layout
         VBox mainLayout = new VBox(10);
-        mainLayout.getChildren().addAll(titleLabel, controlsBox, forecastChart, descriptionLabel);
+        mainLayout.getChildren().addAll(
+                titleLabel,
+                controlsBox,
+                aiStatusText,
+                forecastChart,
+                descriptionLabel);
 
         setCenter(mainLayout);
+    }
+
+    /**
+     * Updates the AI status text
+     */
+    private void updateAiStatus() {
+        aiStatusText.getChildren().clear();
+
+        Text statusText = new Text();
+        if (controller.isUsingAiForecasting()) {
+            statusText.setText(
+                    "AI prediction is enabled. Forecasts include seasonal patterns and Chinese holiday factors.");
+            statusText.setStyle("-fx-fill: green;");
+        } else {
+            statusText.setText("Using traditional trend analysis. Enable AI prediction for more accurate forecasts.");
+            statusText.setStyle("-fx-fill: grey;");
+        }
+
+        aiStatusText.getChildren().add(statusText);
     }
 
     /**
@@ -115,7 +159,8 @@ public class SpendingForecastView extends BorderPane {
         // Get forecasted data
         Map<String, Double> forecastData = controller.getForecastedSpending(historyMonths, forecastMonths);
         XYChart.Series<String, Number> forecastSeries = new XYChart.Series<>();
-        forecastSeries.setName("Forecasted Spending");
+        forecastSeries
+                .setName(controller.isUsingAiForecasting() ? "AI Forecasted Spending" : "Trend Forecasted Spending");
 
         for (Map.Entry<String, Double> entry : forecastData.entrySet()) {
             forecastSeries.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
@@ -124,6 +169,14 @@ public class SpendingForecastView extends BorderPane {
         // Add data to chart
         forecastChart.getData().add(historicalSeries);
         forecastChart.getData().add(forecastSeries);
+
+        // Apply different styles to forecast series based on AI status
+        if (controller.isUsingAiForecasting()) {
+            for (XYChart.Data<String, Number> data : forecastSeries.getData()) {
+                // 为AI预测添加特殊样式
+                data.getNode().setStyle("-fx-stroke-dash-array: 2 2; -fx-stroke-width: 2px;");
+            }
+        }
     }
 
     /**
