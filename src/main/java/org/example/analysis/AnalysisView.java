@@ -16,8 +16,8 @@ import org.example.analysis.BudgetRecommendationView;
  * 提供三个核心分析功能：支出结构可视化、AI支出预测和智能预算推荐
  */
 public class AnalysisView extends Application {
-    private static final int WIDTH = 900;
-    private static final int HEIGHT = 700;
+    private static final int WIDTH = 1200;
+    private static final int HEIGHT = 800;
 
     private BorderPane mainContainer;
     private User currentUser;
@@ -25,14 +25,22 @@ public class AnalysisView extends Application {
     private Button spendingForecastBtn;
     private Button budgetRecommendationBtn;
 
+    /**
+     * 构造函数
+     */
     public AnalysisView() {
         this.currentUser = DashboardView.getCurrentUser();
         this.mainContainer = new BorderPane();
+        System.out.println("AnalysisView构造函数: currentUser = " +
+                (currentUser != null ? currentUser.getUsername() : "null"));
     }
 
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Finance Analysis Dashboard");
+
+        System.out.println("AnalysisView.start(): currentUser = " +
+                (currentUser != null ? currentUser.getUsername() : "null"));
 
         // 构建页面UI
         setupUI();
@@ -78,8 +86,9 @@ public class AnalysisView extends Application {
         // 用户信息
         Label userLabel = new Label("User: " + (currentUser != null ? currentUser.getUsername() : "Guest"));
 
-        // 返回按钮
-        Button backButton = new Button("Return to Dashboard");
+        // 返回按钮 - 改为绿色小按钮
+        Button backButton = new Button("Dashboard");
+        backButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
         backButton.setOnAction(e -> returnToDashboard());
 
         // 添加组件到顶部栏
@@ -104,19 +113,16 @@ public class AnalysisView extends Application {
         // 支出结构可视化按钮
         spendingStructureBtn = new Button("Spending Structure");
         spendingStructureBtn.setMaxWidth(Double.MAX_VALUE);
-        spendingStructureBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
         spendingStructureBtn.setOnAction(e -> showSpendingStructure());
 
         // AI支出预测按钮
         spendingForecastBtn = new Button("AI Spending Forecast");
         spendingForecastBtn.setMaxWidth(Double.MAX_VALUE);
-        spendingForecastBtn.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white;");
         spendingForecastBtn.setOnAction(e -> showSpendingForecast());
 
         // 智能预算推荐按钮
         budgetRecommendationBtn = new Button("Budget Recommendation");
         budgetRecommendationBtn.setMaxWidth(Double.MAX_VALUE);
-        budgetRecommendationBtn.setStyle("-fx-background-color: #FF9800; -fx-text-fill: white;");
         budgetRecommendationBtn.setOnAction(e -> showBudgetRecommendation());
 
         // 添加到菜单
@@ -148,20 +154,34 @@ public class AnalysisView extends Application {
     }
 
     /**
-     * 显示支出结构可视化（饼图）
+     * 显示支出结构可视化
      */
     private void showSpendingStructure() {
         // 高亮选中的按钮
         highlightSelectedButton(spendingStructureBtn);
 
-        // 清空主容器
-        mainContainer.setCenter(null);
+        System.out.println("显示支出结构可视化");
+        System.out.println("当前用户: " + (currentUser != null ? currentUser.getUsername() : "null"));
 
-        // 创建支出结构可视化
-        SpendingStructureChart chart = new SpendingStructureChart(currentUser);
+        try {
+            if (currentUser == null) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Error");
+                alert.setHeaderText(null);
+                alert.setContentText("No user logged in");
+                alert.showAndWait();
+                return;
+            }
 
-        // 设置到主容器
-        mainContainer.setCenter(chart);
+            // 创建支出结构饼图
+            SpendingStructureChart chart = new SpendingStructureChart(currentUser);
+
+            // 设置到主容器
+            mainContainer.setCenter(chart);
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Error", "Failed to display spending structure: " + e.getMessage());
+        }
     }
 
     /**
@@ -171,14 +191,25 @@ public class AnalysisView extends Application {
         // 高亮选中的按钮
         highlightSelectedButton(spendingForecastBtn);
 
-        // 清空主容器
-        mainContainer.setCenter(null);
+        try {
+            if (currentUser == null) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Error");
+                alert.setHeaderText(null);
+                alert.setContentText("No user logged in");
+                alert.showAndWait();
+                return;
+            }
 
-        // 创建AI支出预测视图
-        SpendingForecastView forecastView = new SpendingForecastView();
+            // 创建AI支出预测视图
+            SpendingForecastView forecastView = new SpendingForecastView(currentUser);
 
-        // 设置到主容器
-        mainContainer.setCenter(forecastView);
+            // 设置到主容器
+            mainContainer.setCenter(forecastView);
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Error", "Failed to display spending forecast: " + e.getMessage());
+        }
     }
 
     /**
@@ -188,14 +219,16 @@ public class AnalysisView extends Application {
         // 高亮选中的按钮
         highlightSelectedButton(budgetRecommendationBtn);
 
-        // 清空主容器
-        mainContainer.setCenter(null);
+        try {
+            // 创建智能预算推荐视图
+            BudgetRecommendationView recommendationView = new BudgetRecommendationView();
 
-        // 创建智能预算推荐视图
-        BudgetRecommendationView recommendationView = new BudgetRecommendationView();
-
-        // 设置到主容器
-        mainContainer.setCenter(recommendationView);
+            // 设置到主容器
+            mainContainer.setCenter(recommendationView);
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Error", "Failed to display budget recommendation: " + e.getMessage());
+        }
     }
 
     /**
@@ -203,14 +236,12 @@ public class AnalysisView extends Application {
      */
     private void highlightSelectedButton(Button selectedButton) {
         // 重置所有按钮样式
-        String defaultStyle = "-fx-font-size: 14px;";
-        spendingStructureBtn.setStyle(defaultStyle);
-        spendingForecastBtn.setStyle(defaultStyle);
-        budgetRecommendationBtn.setStyle(defaultStyle);
+        spendingStructureBtn.setStyle("-fx-background-color: #f0f0f0;");
+        spendingForecastBtn.setStyle("-fx-background-color: #f0f0f0;");
+        budgetRecommendationBtn.setStyle("-fx-background-color: #f0f0f0;");
 
         // 设置选中按钮的样式
-        String selectedStyle = "-fx-font-size: 14px; -fx-background-color: #c0d9e7; -fx-font-weight: bold;";
-        selectedButton.setStyle(selectedStyle);
+        selectedButton.setStyle("-fx-background-color: #c0d9e7; -fx-font-weight: bold;");
     }
 
     /**
