@@ -9,7 +9,7 @@ import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import org.example.DashboardView;
 import org.example.User;
-// import org.example.analysis.BudgetRecommendationView;
+import org.example.analysis.BudgetRecommendationView;
 
 /**
  * AnalysisView类 - 数据分析页面
@@ -21,6 +21,9 @@ public class AnalysisView extends Application {
 
     private BorderPane mainContainer;
     private User currentUser;
+    private Button spendingStructureBtn;
+    private Button spendingForecastBtn;
+    private Button budgetRecommendationBtn;
 
     public AnalysisView() {
         this.currentUser = DashboardView.getCurrentUser();
@@ -99,19 +102,19 @@ public class AnalysisView extends Application {
         menuLabel.setPadding(new Insets(0, 0, 10, 0));
 
         // 支出结构可视化按钮
-        Button spendingStructureBtn = new Button("Spending Structure");
+        spendingStructureBtn = new Button("Spending Structure");
         spendingStructureBtn.setMaxWidth(Double.MAX_VALUE);
         spendingStructureBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
         spendingStructureBtn.setOnAction(e -> showSpendingStructure());
 
         // AI支出预测按钮
-        Button forecastBtn = new Button("AI Spending Forecast");
-        forecastBtn.setMaxWidth(Double.MAX_VALUE);
-        forecastBtn.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white;");
-        forecastBtn.setOnAction(e -> showSpendingForecast());
+        spendingForecastBtn = new Button("AI Spending Forecast");
+        spendingForecastBtn.setMaxWidth(Double.MAX_VALUE);
+        spendingForecastBtn.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white;");
+        spendingForecastBtn.setOnAction(e -> showSpendingForecast());
 
         // 智能预算推荐按钮
-        Button budgetRecommendationBtn = new Button("Budget Recommendation");
+        budgetRecommendationBtn = new Button("Budget Recommendation");
         budgetRecommendationBtn.setMaxWidth(Double.MAX_VALUE);
         budgetRecommendationBtn.setStyle("-fx-background-color: #FF9800; -fx-text-fill: white;");
         budgetRecommendationBtn.setOnAction(e -> showBudgetRecommendation());
@@ -120,7 +123,7 @@ public class AnalysisView extends Application {
         menu.getChildren().addAll(
                 menuLabel,
                 spendingStructureBtn,
-                forecastBtn,
+                spendingForecastBtn,
                 budgetRecommendationBtn);
 
         return menu;
@@ -148,8 +151,16 @@ public class AnalysisView extends Application {
      * 显示支出结构可视化（饼图）
      */
     private void showSpendingStructure() {
-        // 使用SpendingStructureChart显示支出结构饼图
+        // 高亮选中的按钮
+        highlightSelectedButton(spendingStructureBtn);
+
+        // 清空主容器
+        mainContainer.setCenter(null);
+
+        // 创建支出结构可视化
         SpendingStructureChart chart = new SpendingStructureChart(currentUser);
+
+        // 设置到主容器
         mainContainer.setCenter(chart);
     }
 
@@ -157,8 +168,16 @@ public class AnalysisView extends Application {
      * 显示AI支出预测
      */
     private void showSpendingForecast() {
-        // 使用SpendingForecastView显示AI支出预测
-        SpendingForecastView forecastView = new SpendingForecastView(currentUser);
+        // 高亮选中的按钮
+        highlightSelectedButton(spendingForecastBtn);
+
+        // 清空主容器
+        mainContainer.setCenter(null);
+
+        // 创建AI支出预测视图
+        SpendingForecastView forecastView = new SpendingForecastView();
+
+        // 设置到主容器
         mainContainer.setCenter(forecastView);
     }
 
@@ -166,26 +185,32 @@ public class AnalysisView extends Application {
      * 显示智能预算推荐
      */
     private void showBudgetRecommendation() {
-        // 将在后续步骤实现
-        showComingSoonMessage("Budget Recommendation");
+        // 高亮选中的按钮
+        highlightSelectedButton(budgetRecommendationBtn);
+
+        // 清空主容器
+        mainContainer.setCenter(null);
+
+        // 创建智能预算推荐视图
+        BudgetRecommendationView recommendationView = new BudgetRecommendationView();
+
+        // 设置到主容器
+        mainContainer.setCenter(recommendationView);
     }
 
     /**
-     * 显示即将推出的功能提示
+     * 高亮选中的按钮
      */
-    private void showComingSoonMessage(String feature) {
-        VBox messageBox = new VBox(20);
-        messageBox.setAlignment(Pos.CENTER);
-        messageBox.setPadding(new Insets(20));
+    private void highlightSelectedButton(Button selectedButton) {
+        // 重置所有按钮样式
+        String defaultStyle = "-fx-font-size: 14px;";
+        spendingStructureBtn.setStyle(defaultStyle);
+        spendingForecastBtn.setStyle(defaultStyle);
+        budgetRecommendationBtn.setStyle(defaultStyle);
 
-        Label featureLabel = new Label(feature);
-        featureLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
-
-        Label comingSoonLabel = new Label("Coming Soon");
-        comingSoonLabel.setStyle("-fx-font-size: 18px;");
-
-        messageBox.getChildren().addAll(featureLabel, comingSoonLabel);
-        mainContainer.setCenter(messageBox);
+        // 设置选中按钮的样式
+        String selectedStyle = "-fx-font-size: 14px; -fx-background-color: #c0d9e7; -fx-font-weight: bold;";
+        selectedButton.setStyle(selectedStyle);
     }
 
     /**
