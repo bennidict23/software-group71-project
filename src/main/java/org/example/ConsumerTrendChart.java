@@ -56,6 +56,7 @@ public class ConsumerTrendChart {
             String line = br.readLine(); // 跳过标题
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
+
                 if (parts.length < 6 || !parts[0].equals(currentUser.getUsername()))
                     continue;
 
@@ -67,6 +68,7 @@ public class ConsumerTrendChart {
                 } catch (DateTimeParseException ex) {
                     date = LocalDate.parse(raw, DateTimeFormatter.ofPattern("yyyy-M-d"));
                 }
+
 
                 if (!date.isBefore(sevenDaysAgo) && !date.isAfter(today)) {
                     double amt = Double.parseDouble(parts[3]);
