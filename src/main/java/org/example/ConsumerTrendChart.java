@@ -61,7 +61,7 @@ public class ConsumerTrendChart {
                     continue;
 
                 // 解析日期（兼容 yyyy‑MM‑dd 和 yyyy/M/d）
-                String raw = parts[2].replace('/', '-').trim();
+                String raw = parts[3].replace('/', '-').trim();
                 LocalDate date;
                 try {
                     date = LocalDate.parse(raw, DateTimeFormatter.ISO_LOCAL_DATE);
@@ -71,7 +71,7 @@ public class ConsumerTrendChart {
 
 
                 if (!date.isBefore(sevenDaysAgo) && !date.isAfter(today)) {
-                    double amt = Double.parseDouble(parts[3]);
+                    double amt = Double.parseDouble(parts[4]);
                     dailySpending.merge(date, amt, Double::sum);
                 }
             }
