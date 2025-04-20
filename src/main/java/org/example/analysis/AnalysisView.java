@@ -157,8 +157,9 @@ public class AnalysisView extends Application {
      * 显示AI支出预测
      */
     private void showSpendingForecast() {
-        // 将在后续步骤实现
-        showComingSoonMessage("AI Spending Forecast");
+        // 使用SpendingForecastView显示AI支出预测
+        SpendingForecastView forecastView = new SpendingForecastView(currentUser);
+        mainContainer.setCenter(forecastView);
     }
 
     /**
