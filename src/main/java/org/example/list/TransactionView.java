@@ -2,6 +2,9 @@ package org.example.list;
 
 // TransactionView.java
 import java.time.LocalDate;
+
+import org.example.DashboardView;
+
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
@@ -11,6 +14,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
 public class TransactionView {
     private final TextField searchField = new TextField();
@@ -43,14 +47,47 @@ public class TransactionView {
     }
 
     private void layoutUI() {
+        // 创建返回按钮
+        Button btnBack = new Button("Dashboard");
+        btnBack.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
+        btnBack.setOnAction(e -> returnToDashboard());
+    
+        // 搜索组件
         searchField.setPromptText("Search...");
         searchButton.setPrefWidth(80);
         HBox searchBox = new HBox(10, searchField, searchButton);
         searchBox.setPadding(new Insets(0, 10, 10, 10));
+    
+        // 主布局容器
+        VBox mainContainer = new VBox(10);
+        mainContainer.setPadding(new Insets(10));
         
-        VBox vbox = new VBox(10);
-        vbox.getChildren().addAll(searchBox, table, loadButton);
-        root.setCenter(vbox);
+        // 按层级添加组件
+        mainContainer.getChildren().addAll(
+            btnBack,       // 顶部返回按钮
+            searchBox,     // 搜索栏
+            table,         // 数据表格
+            loadButton     // 底部加载按钮
+        );
+    
+        // 设置表格自动填充
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+    
+        // 设置根布局
+        root.setCenter(mainContainer);
+    }
+    
+    private void returnToDashboard() {
+        Stage currentStage = (Stage) root.getScene().getWindow();
+        currentStage.close();
+        
+        // 保留用户状态
+        DashboardView dashboard = new DashboardView();
+        try {
+            dashboard.start(new Stage());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     public BorderPane getView() {
