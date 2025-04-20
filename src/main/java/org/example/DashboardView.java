@@ -37,11 +37,11 @@ public class DashboardView extends Application {
 
     // 标记是否已导入过数据
     private static boolean importDone = false;
+
     /** 由外部（FormattedInput.importCSV）调用，标记已导入数据 */
     public static void setImportDone(boolean done) {
         importDone = done;
     }
-
 
     // 格式化输入页面对象，用于处理格式化输入相关操作
     private FormattedInput formattedInput = null;
@@ -51,6 +51,7 @@ public class DashboardView extends Application {
 
     /**
      * 设置当前用户，静态方法，方便从外部设置当前登录用户。
+     * 
      * @param user 当前登录用户
      */
     public static void setCurrentUser(User user) {
@@ -59,6 +60,7 @@ public class DashboardView extends Application {
 
     /**
      * 获取当前用户，静态方法，方便在类的其他方法中获取当前登录用户。
+     * 
      * @return 当前登录用户
      */
     public static User getCurrentUser() {
@@ -67,6 +69,7 @@ public class DashboardView extends Application {
 
     /**
      * 启动仪表盘界面。
+     * 
      * @param primaryStage 主舞台
      * @throws Exception 异常
      */
@@ -100,7 +103,7 @@ public class DashboardView extends Application {
 
         // 初始化页面选择下拉框，添加页面选项，并设置页面切换逻辑
         pageSelector = new ComboBox<>();
-        pageSelector.getItems().addAll("Formatted Input", "Transaction Viewer");
+        pageSelector.getItems().addAll("Formatted Input", "Transaction Viewer", "Analysis");
         pageSelector.setPromptText("Select a page...");
         pageSelector.setOnAction(e -> {
             String selectedPage = pageSelector.getValue();
@@ -128,6 +131,18 @@ public class DashboardView extends Application {
                     transactionViewer.start(transactionStage);
                     primaryStage.close();
                     // 不关闭主舞台
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            } else if ("Analysis".equals(selectedPage)) {
+                try {
+                    // 打开Analysis页面
+                    Stage analysisStage = new Stage();
+                    analysisStage.setTitle("Data Analysis");
+                    // TODO: 实现Analysis页面后替换这里
+                    showAlert(Alert.AlertType.INFORMATION, "Coming Soon", "Analysis page is under development");
+                    // analysisStage.show();
+                    // primaryStage.close();
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -159,7 +174,9 @@ public class DashboardView extends Application {
         budgetLabel = new Label("Monthly Budget: $" + currentUser.getMonthlyBudget());
         goalLabel = new Label("Monthly Savings Goal: $" + currentUser.getMonthlyTarget());
         progressBar = new ProgressBar(currentUser.getSavedAmount() / currentUser.getMonthlyTarget());
-        progressLabel = new Label("Savings Progress: " + (int) (currentUser.getSavedAmount() / currentUser.getMonthlyTarget() * 100) + "% (" + currentUser.getSavedAmount() + " saved)");
+        progressLabel = new Label(
+                "Savings Progress: " + (int) (currentUser.getSavedAmount() / currentUser.getMonthlyTarget() * 100)
+                        + "% (" + currentUser.getSavedAmount() + " saved)");
         Button btnSetGoal = new Button("Set Goal");
         btnSetGoal.setOnAction(e -> showGoalDialog(primaryStage));
         Button btnSetBudget = new Button("Set Budget");
@@ -231,13 +248,16 @@ public class DashboardView extends Application {
                 budgetLabel.setText("Monthly Budget: $" + currentUser.getMonthlyBudget());
                 goalLabel.setText("Monthly Savings Goal: $" + currentUser.getMonthlyTarget());
                 progressBar.setProgress(currentUser.getSavedAmount() / currentUser.getMonthlyTarget());
-                progressLabel.setText("Savings Progress: " + (int) (currentUser.getSavedAmount() / currentUser.getMonthlyTarget() * 100) + "% (" + currentUser.getSavedAmount() + " saved)");
+                progressLabel.setText("Savings Progress: "
+                        + (int) (currentUser.getSavedAmount() / currentUser.getMonthlyTarget() * 100) + "% ("
+                        + currentUser.getSavedAmount() + " saved)");
             }
         });
     }
 
     /**
      * 显示密码修改对话框。
+     * 
      * @param owner 父级舞台
      */
     private void showChangePasswordDialog(Stage owner) {
@@ -294,6 +314,7 @@ public class DashboardView extends Application {
 
     /**
      * 显示目标设置对话框。
+     * 
      * @param owner 父级舞台
      */
     private void showGoalDialog(Stage owner) {
@@ -302,10 +323,12 @@ public class DashboardView extends Application {
         dialog.initOwner(owner);
 
         // 创建年度储蓄进度展示区域
-        ProgressBar annualProgressBar = new ProgressBar(currentUser.getAnnualSavedAmount() / currentUser.getAnnualTarget());
+        ProgressBar annualProgressBar = new ProgressBar(
+                currentUser.getAnnualSavedAmount() / currentUser.getAnnualTarget());
         annualProgressBar.setPrefWidth(550);
         int initPercent = (int) (currentUser.getAnnualSavedAmount() / currentUser.getAnnualTarget() * 100);
-        Label annualProgressLabel = new Label("Annual Savings Progress: " + initPercent + "% (" + currentUser.getAnnualSavedAmount() + " saved)");
+        Label annualProgressLabel = new Label(
+                "Annual Savings Progress: " + initPercent + "% (" + currentUser.getAnnualSavedAmount() + " saved)");
         VBox progressBox = new VBox(5, annualProgressBar, annualProgressLabel);
         progressBox.setAlignment(Pos.CENTER);
         progressBox.setPadding(new Insets(10));
@@ -330,7 +353,8 @@ public class DashboardView extends Application {
         Button monthlySetButton = new Button("SET");
         monthlySetButton.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-pref-height: 40px;");
 
-        VBox monthlyBox = new VBox(10, monthlyLabel, monthlyField, monthlyRemarkLabel, monthlyRemarkField, monthlySetButton);
+        VBox monthlyBox = new VBox(10, monthlyLabel, monthlyField, monthlyRemarkLabel, monthlyRemarkField,
+                monthlySetButton);
         monthlyBox.setPadding(new Insets(10));
         monthlyBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
 
@@ -359,7 +383,8 @@ public class DashboardView extends Application {
                 double ratio = currentUser.getAnnualSavedAmount() / newAnnual;
                 annualProgressBar.setProgress(ratio);
                 int percent = (int) (ratio * 100);
-                annualProgressLabel.setText("Annual Savings Progress: " + percent + "% (" + currentUser.getAnnualSavedAmount() + " saved)");
+                annualProgressLabel.setText(
+                        "Annual Savings Progress: " + percent + "% (" + currentUser.getAnnualSavedAmount() + " saved)");
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Annual target updated to: " + newAnnual);
                 userManager.saveUserSettings(currentUser);
             } catch (NumberFormatException ex) {
@@ -378,7 +403,8 @@ public class DashboardView extends Application {
                 currentUser.setMonthlyTarget(newMonthly);
                 goalLabel.setText("Monthly Saving Goal: $" + newMonthly);
                 progressBar.setProgress(currentUser.getSavedAmount() / newMonthly);
-                progressLabel.setText("Savings Progress: " + (int) (currentUser.getSavedAmount() / newMonthly * 100) + "% (" + currentUser.getSavedAmount() + " saved)");
+                progressLabel.setText("Savings Progress: " + (int) (currentUser.getSavedAmount() / newMonthly * 100)
+                        + "% (" + currentUser.getSavedAmount() + " saved)");
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Monthly target updated to: " + newMonthly);
                 userManager.saveUserSettings(currentUser);
                 dialog.close();
@@ -390,6 +416,7 @@ public class DashboardView extends Application {
 
     /**
      * 显示预算设置对话框。
+     * 
      * @param owner 父级舞台
      */
     private void showBudgetDialog(Stage owner) {
@@ -417,7 +444,8 @@ public class DashboardView extends Application {
         Button shoppingSetButton = new Button("SET");
         shoppingSetButton.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-pref-height: 40px;");
 
-        shoppingBox.getChildren().addAll(shoppingLabel, shoppingField, shoppingRemarkLabel, shoppingRemarkField, shoppingSetButton);
+        shoppingBox.getChildren().addAll(shoppingLabel, shoppingField, shoppingRemarkLabel, shoppingRemarkField,
+                shoppingSetButton);
 
         // 创建交通预算设置区域
         VBox transportBox = new VBox(10);
@@ -432,7 +460,8 @@ public class DashboardView extends Application {
         Button transportSetButton = new Button("SET");
         transportSetButton.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-pref-height: 40px;");
 
-        transportBox.getChildren().addAll(transportLabel, transportField, transportRemarkLabel, transportRemarkField, transportSetButton);
+        transportBox.getChildren().addAll(transportLabel, transportField, transportRemarkLabel, transportRemarkField,
+                transportSetButton);
 
         // 创建饮食预算设置区域
         VBox dietBox = new VBox(10);
@@ -462,7 +491,8 @@ public class DashboardView extends Application {
         Button amusementSetButton = new Button("SET");
         amusementSetButton.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-pref-height: 40px;");
 
-        amusementBox.getChildren().addAll(amusementLabel, amusementField, amusementRemarkLabel, amusementRemarkField, amusementSetButton);
+        amusementBox.getChildren().addAll(amusementLabel, amusementField, amusementRemarkLabel, amusementRemarkField,
+                amusementSetButton);
 
         // 将各个预算设置区域组合到表单布局中
         grid.add(shoppingBox, 0, 0);
@@ -487,8 +517,7 @@ public class DashboardView extends Application {
                         currentUser.getShoppingBudget() +
                                 currentUser.getTransportBudget() +
                                 currentUser.getDietBudget() +
-                                currentUser.getAmusementBudget()
-                );
+                                currentUser.getAmusementBudget());
                 budgetLabel.setText("Monthly Budget: $" + currentUser.getMonthlyBudget());
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Shopping budget updated to: " + newBudget);
                 userManager.saveUserSettings(currentUser);
@@ -510,8 +539,7 @@ public class DashboardView extends Application {
                         currentUser.getShoppingBudget() +
                                 currentUser.getTransportBudget() +
                                 currentUser.getDietBudget() +
-                                currentUser.getAmusementBudget()
-                );
+                                currentUser.getAmusementBudget());
                 budgetLabel.setText("Monthly Budget: $" + currentUser.getMonthlyBudget());
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Transport budget updated to: " + newBudget);
                 userManager.saveUserSettings(currentUser);
@@ -533,8 +561,7 @@ public class DashboardView extends Application {
                         currentUser.getShoppingBudget() +
                                 currentUser.getTransportBudget() +
                                 currentUser.getDietBudget() +
-                                currentUser.getAmusementBudget()
-                );
+                                currentUser.getAmusementBudget());
                 budgetLabel.setText("Monthly Budget: $" + currentUser.getMonthlyBudget());
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Diet budget updated to: " + newBudget);
                 userManager.saveUserSettings(currentUser);
@@ -556,8 +583,7 @@ public class DashboardView extends Application {
                         currentUser.getShoppingBudget() +
                                 currentUser.getTransportBudget() +
                                 currentUser.getDietBudget() +
-                                currentUser.getAmusementBudget()
-                );
+                                currentUser.getAmusementBudget());
                 budgetLabel.setText("Monthly Budget: $" + currentUser.getMonthlyBudget());
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Amusement budget updated to: " + newBudget);
                 userManager.saveUserSettings(currentUser);
@@ -569,8 +595,9 @@ public class DashboardView extends Application {
 
     /**
      * 显示提示对话框。
-     * @param type 对话框类型
-     * @param title 对话框标题
+     * 
+     * @param type    对话框类型
+     * @param title   对话框标题
      * @param message 对话框内容
      */
     private void showAlert(Alert.AlertType type, String title, String message) {
@@ -583,6 +610,7 @@ public class DashboardView extends Application {
 
     /**
      * 用户登出逻辑。
+     * 
      * @param primaryStage 主舞台
      */
     private void logout(Stage primaryStage) {
