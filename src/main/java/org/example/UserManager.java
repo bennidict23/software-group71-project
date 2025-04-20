@@ -1,17 +1,24 @@
 package org.example;
 
+import javafx.application.Platform;
 import javafx.scene.control.Alert;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class UserManager {
     private static final String USERS_FILE = "users.csv";
     private static final String SETTINGS_FILE = "user_settings.csv";
     private static final String TRANSACTION_FILE = "transactions.csv";
+
+    private ScheduledExecutorService scheduler;
 
     public UserManager() {
         // 如果文件不存在，则创建并添加表头
@@ -39,6 +46,10 @@ public class UserManager {
                 e.printStackTrace();
             }
         }
+
+        // 启动定时任务，每十秒检查一次 transactions.csv 文件的变化
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler.scheduleAtFixedRate(this::checkTransactionsFile, 0, 10, TimeUnit.SECONDS);
     }
 
     // 注册用户的方法
@@ -140,11 +151,11 @@ public class UserManager {
         return updateUserPassword(username, newPassword);
     }
 
-    // 加载用户设置
+    // 修改后的加载用户设置方法
     public void loadUserSettings(User user) {
         try (BufferedReader br = new BufferedReader(new FileReader(SETTINGS_FILE))) {
             String line;
-            br.readLine();
+            br.readLine(); // 跳过标题行
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
                 if (parts.length >= 12 && parts[0].equals(user.getUsername())) {
@@ -155,11 +166,8 @@ public class UserManager {
 
                     // 如果当前年份与用户设置中的年份不一致，重置年储蓄目标
                     if (currentYear != userYear) {
-                        // 重置年储蓄目标
-                        user.setAnnualTarget(0.0);
-                        // 重置年已储蓄金额
-                        user.setAnnualSavedAmount(6000.0);
-                        // 更新年份为当前年份
+                        // 调用 resetAnnualSettings 方法重置所有年相关设置
+                        user.resetAnnualSettings();
                         user.setCurrentYear(currentYear);
                         // 保存更新后的设置
                         saveUserSettings(user);
@@ -248,45 +256,136 @@ public class UserManager {
         }
     }
 
-    // 新增方法：根据交易记录更新用户的 savedAmount 和 annualSavedAmount
-    public void updateUserSavedAmount(User user) {
-        String username = user.getUsername();
-        double yearlySpent = 0.0;
-        double monthlySpent = 0.0;
+    // 检查 transactions.csv 文件的变化并更新 savedAmount 和 annualSavedAmount
+    public void checkTransactionsFile() {
+        File file = new File(TRANSACTION_FILE);
+        if (!file.exists()) {
+            return;
+        }
 
-        try (BufferedReader br = new BufferedReader(new FileReader(TRANSACTION_FILE))) {
-            String line;
-            br.readLine(); // 跳过标题行
-            while ((line = br.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length >= 6 && parts[0].equals(username)) {
-                    String dateStr = parts[2];
-                    double amount = Double.parseDouble(parts[3]);
-                    String category = parts[4];
+        List<String> lines;
+        try {
+            lines = Files.readAllLines(file.toPath());
+        } catch (IOException e) {
+            e.printStackTrace();
+            return;
+        }
 
-                    // 解析日期
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-                    LocalDate date = LocalDate.parse(dateStr, formatter);
+        // 跳过标题行
+        List<String> currentTransactions = lines.subList(1, lines.size());
 
-                    // 检查是否为本月的交易
-                    if (date.getYear() == LocalDate.now().getYear() && date.getMonthValue() == LocalDate.now().getMonthValue()) {
-                        monthlySpent += amount;
-                    }
+        // 获取上次检查时的交易记录
+        List<String> lastTransactions = getLastTransactions();
 
-                    // 累加所有交易
-                    yearlySpent += amount;
+        // 比较当前交易记录和上次交易记录
+        List<String> newTransactions = new ArrayList<>(currentTransactions);
+        newTransactions.removeAll(lastTransactions);
+
+        List<String> removedTransactions = new ArrayList<>(lastTransactions);
+        removedTransactions.removeAll(currentTransactions);
+
+        updateSavedAmounts(newTransactions, removedTransactions);
+
+        // 更新上次检查时的交易记录
+        saveLastTransactions(currentTransactions);
+
+        // 如果有新的交易记录，显示更新提示
+        if (!newTransactions.isEmpty()) {
+            showUpdateNotification(newTransactions.size());
+        }
+    }
+
+    private void showUpdateNotification(int newTransactionCount) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Transaction Update");
+            alert.setHeaderText(null);
+            alert.setContentText("There are " + newTransactionCount + " new transaction(s) recorded.");
+            alert.showAndWait();
+        });
+    }
+
+    // 更新 savedAmount 和 annualSavedAmount
+    public void updateSavedAmounts(List<String> newTransactions, List<String> removedTransactions) {
+        User currentUser = DashboardView.getCurrentUser();
+        if (currentUser == null) {
+            return;
+        }
+
+        double newMonthlySpent = 0.0;
+        double newYearlySpent = 0.0;
+        double removedMonthlySpent = 0.0;
+        double removedYearlySpent = 0.0;
+
+        for (String line : newTransactions) {
+            String[] parts = line.split(",");
+            if (parts.length >= 6 && parts[0].equals(currentUser.getUsername())) {
+                double amount = Double.parseDouble(parts[3]);
+                String dateStr = parts[2];
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                LocalDate date = LocalDate.parse(dateStr, formatter);
+
+                if (date.getYear() == LocalDate.now().getYear() && date.getMonthValue() == LocalDate.now().getMonthValue()) {
+                    newMonthlySpent += amount;
                 }
+                if (date.getYear() == LocalDate.now().getYear()) {
+                    newYearlySpent += amount;
+                }
+            }
+        }
+
+        for (String line : removedTransactions) {
+            String[] parts = line.split(",");
+            if (parts.length >= 6 && parts[0].equals(currentUser.getUsername())) {
+                double amount = Double.parseDouble(parts[3]);
+                String dateStr = parts[2];
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                LocalDate date = LocalDate.parse(dateStr, formatter);
+
+                if (date.getYear() == LocalDate.now().getYear() && date.getMonthValue() == LocalDate.now().getMonthValue()) {
+                    removedMonthlySpent += amount;
+                }
+                if (date.getYear() == LocalDate.now().getYear()) {
+                    removedYearlySpent += amount;
+                }
+            }
+        }
+
+        // 更新 savedAmount 和 annualSavedAmount
+        currentUser.setSavedAmount(currentUser.getSavedAmount() - newMonthlySpent + removedMonthlySpent);
+        currentUser.setAnnualSavedAmount(currentUser.getAnnualSavedAmount() - newYearlySpent + removedYearlySpent);
+
+        // 保存更新后的设置
+        saveUserSettings(currentUser);
+    }
+
+    // 获取上次检查时的交易记录
+    private List<String> getLastTransactions() {
+        File file = new File("last_transactions.txt");
+        if (!file.exists()) {
+            return new ArrayList<>();
+        }
+
+        List<String> lines;
+        try {
+            lines = Files.readAllLines(file.toPath());
+        } catch (IOException e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+        return lines;
+    }
+
+    // 保存当前检查时的交易记录
+    private void saveLastTransactions(List<String> transactions) {
+        File file = new File("last_transactions.txt");
+        try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
+            for (String line : transactions) {
+                writer.println(line);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        // 更新 savedAmount 和 annualSavedAmount
-        user.setSavedAmount(user.getSavedAmount() - monthlySpent);
-        user.setAnnualSavedAmount(user.getAnnualSavedAmount() - yearlySpent);
-
-        // 保存更新后的设置
-        saveUserSettings(user);
     }
 
     public void checkMonthlyExpenses(User user) {
@@ -359,5 +458,12 @@ public class UserManager {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    // 关闭定时任务
+    public void shutdownScheduler() {
+        if (scheduler != null) {
+            scheduler.shutdown();
+        }
     }
 }
