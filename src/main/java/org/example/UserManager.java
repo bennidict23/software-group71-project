@@ -7,6 +7,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -407,8 +408,17 @@ public class UserManager {
                     String category = parts[4];
 
                     // 解析日期
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-                    LocalDate date = LocalDate.parse(dateStr, formatter);
+                    // 先把所有“/”换成“-”，再用 yyyy-M-d 模式解析单/双位的月日
+                    String normalized = dateStr.trim().replace('/', '-');
+                    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-M-d");
+                    LocalDate date;
+                    try {
+                        date = LocalDate.parse(normalized, fmt);
+                    } catch (DateTimeParseException ex) {
+                        // 如果还是解析失败，就跳过这条记录
+                        continue;
+                    }
+
 
                     // 检查是否为本月的交易
                     if (date.getYear() == LocalDate.now().getYear() && date.getMonthValue() == LocalDate.now().getMonthValue()) {
