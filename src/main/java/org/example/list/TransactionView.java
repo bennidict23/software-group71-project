@@ -3,17 +3,21 @@ package org.example.list;
 // TransactionView.java
 import java.time.LocalDate;
 import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 public class TransactionView {
+    private final TextField searchField = new TextField();
     private final BorderPane root = new BorderPane();
     private final TableView<Transaction> table = new TableView<>();
-    private final Button loadButton = new Button("Load Data");
-
+    private final Button loadButton = new Button("Update Data");
+    private final Button searchButton = new Button("Search");
     public TransactionView() {
         configureTable();
         layoutUI();
@@ -35,11 +39,17 @@ public class TransactionView {
         descCol.setCellValueFactory(data -> data.getValue().descriptionProperty());
 
         table.getColumns().addAll(userCol, sourceCol, dateCol, amountCol, categoryCol, descCol);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
     }
 
     private void layoutUI() {
+        searchField.setPromptText("Search...");
+        searchButton.setPrefWidth(80);
+        HBox searchBox = new HBox(10, searchField, searchButton);
+        searchBox.setPadding(new Insets(0, 10, 10, 10));
+        
         VBox vbox = new VBox(10);
-        vbox.getChildren().addAll(table, loadButton);
+        vbox.getChildren().addAll(searchBox, table, loadButton);
         root.setCenter(vbox);
     }
 
@@ -49,6 +59,13 @@ public class TransactionView {
 
     public Button getLoadButton() {
         return loadButton;
+    }
+    
+    public TextField getSearchField() {
+        return searchField;
+    }
+    public Button getSearchButton() {
+        return searchButton;
     }
 
     public void updateTable(ObservableList<Transaction> data) {
