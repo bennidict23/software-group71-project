@@ -1,7 +1,5 @@
-3,Bob,Credit Card,2023-03-05,1500.00,Income,Salary deposit
+Id,User,Source,Date,Amount,Category,Description
 5,Mike,Cash,2023-05-18,-120.00,Dining,Team lunch meeting
 6,Sarah,OCBC,2023-06-21,-89.90,Utilities,Electricity bill
 7,David,PayNow,2023-07-07,500.00,Transfer,Friend repayment
 8,Linda,Shopee,2023-08-15,-75.30,Shopping,Office chair
-9,Tom,Revolut,2023-09-01,-25.00,Entertainment,Movie tickets
-10,Sophia,UOB,2023-10-10,2000.00,Income,Freelance payment
