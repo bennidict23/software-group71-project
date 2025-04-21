@@ -53,7 +53,10 @@ public class TransactionLoader {
         List<String> remainingLines = new ArrayList<>();
         for (String line : lines) {
             // 跳过标题行
-            if (line.startsWith("Id,User,Source,Date,Amount,Category,Description")) continue;
+            if (line.startsWith("Id,User,Source,Date,Amount,Category,Description")){
+                remainingLines.add(line);
+                continue;
+            }
             
             // 解析ID并比较
             String[] parts = line.split(",");
