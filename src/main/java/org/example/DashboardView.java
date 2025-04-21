@@ -13,6 +13,7 @@ import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import org.example.list.TransactionViewer;
 
+
 import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -192,10 +193,10 @@ public class DashboardView extends Application {
         HBox topBox = new HBox(20, personalInfoBox, budgetBox);
         topBox.setAlignment(Pos.TOP_CENTER);
         topBox.setPadding(new Insets(10));
-        // 创建 BarChart
+        // 创建 LineChart
         LineChart<String, Number> lineChart = new ConsumerTrendChart(currentUser).createChart();
 
-        // 创建 StackPane 并添加 BarChart
+        // 创建 StackPane 并添加 LineChart
         StackPane chartPane = new StackPane();
         chartPane.getChildren().add(lineChart);
         chartPane.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");

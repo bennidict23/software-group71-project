@@ -53,14 +53,18 @@ public class ConsumerTrendChart {
         LocalDate sevenDaysAgo = today.minusDays(6);
 
         try (BufferedReader br = new BufferedReader(new FileReader(TRANSACTION_FILE))) {
-            String line = br.readLine(); // 跳过标题
+            // 跳过表头
+            String line = br.readLine();
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
 
-                if (parts.length < 6 || !parts[0].equals(currentUser.getUsername()))
-                    continue;
+                // 至少要有 7 列：Id,User,Source,Date,Amount,Category,Description
+                if (parts.length < 7) continue;
 
-                // 解析日期（兼容 yyyy‑MM‑dd 和 yyyy/M/d）
+                // user 在 parts[1]，date 在 parts[3]，amount 在 parts[4]
+                if (!parts[1].equals(currentUser.getUsername())) continue;
+
+                // 解析日期（兼容 yyyy‑MM‑dd 或者 yyyy/M/d）
                 String raw = parts[3].replace('/', '-').trim();
                 LocalDate date;
                 try {
@@ -69,9 +73,10 @@ public class ConsumerTrendChart {
                     date = LocalDate.parse(raw, DateTimeFormatter.ofPattern("yyyy-M-d"));
                 }
 
+                // 金额
+                double amt = Double.parseDouble(parts[4]);
 
                 if (!date.isBefore(sevenDaysAgo) && !date.isAfter(today)) {
-                    double amt = Double.parseDouble(parts[4]);
                     dailySpending.merge(date, amt, Double::sum);
                 }
             }
@@ -79,11 +84,12 @@ public class ConsumerTrendChart {
             e.printStackTrace();
         }
 
-        // 确保每一天都有数据点
+        // 保证每一天都有一个点
         for (LocalDate d = sevenDaysAgo; !d.isAfter(today); d = d.plusDays(1)) {
             dailySpending.putIfAbsent(d, 0.0);
         }
 
         return new TreeMap<>(dailySpending);
     }
+
 }

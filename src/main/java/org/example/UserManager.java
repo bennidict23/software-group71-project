@@ -197,24 +197,34 @@ public class UserManager {
     // 保存用户设置
     public void saveUserSettings(User user) {
         File inputFile = new File(SETTINGS_FILE);
-        File tempFile = new File("settings_temp.csv");
+        // —— 如果不存在，就先创建并写入标题
+        if (!inputFile.exists()) {
+            try (PrintWriter writer = new PrintWriter(new FileWriter(inputFile))) {
+                writer.println("username,annualTarget,monthlyTarget,monthlyBudget,"
+                        + "shoppingBudget,transportBudget,dietBudget,amusementBudget,"
+                        + "savedAmount,annualSavedAmount");
+            } catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+        }
 
+        File tempFile = new File("settings_temp.csv");
         List<String> lines = new ArrayList<>();
         boolean found = false;
+
+        // 下面就照原来的逻辑：先把所有行读进来，更新这一行，然后写回……
         try (BufferedReader br = new BufferedReader(new FileReader(inputFile))) {
             String line = br.readLine();
-            if (line != null) { // 写入标题行
-                lines.add(line);
-            }
+            if (line != null) lines.add(line);
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
-                if (parts.length >= 12 && parts[0].equals(user.getUsername())) {
-                    // 更新现有设置
+                if (parts[0].equals(user.getUsername())) {
+                    // 这里拼一行新的
                     lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + ","
-                            + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget()
-                            + "," + user.getDietBudget() + "," + user.getAmusementBudget() + "," + user.getSavedAmount()
-                            + "," + user.getAnnualSavedAmount() + "," + user.getCurrentYear() + ","
-                            + user.getCurrentMonth());
+                            + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget() + ","
+                            + user.getDietBudget() + "," + user.getAmusementBudget() + ","
+                            + user.getSavedAmount() + "," + user.getAnnualSavedAmount());
                     found = true;
                 } else {
                     lines.add(line);
@@ -227,30 +237,23 @@ public class UserManager {
         if (!found) {
             lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + ","
                     + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget() + ","
-                    + user.getDietBudget() + "," + user.getAmusementBudget() + "," + user.getSavedAmount() + ","
-                    + user.getAnnualSavedAmount() + "," + user.getCurrentYear() + "," + user.getCurrentMonth());
+                    + user.getDietBudget() + "," + user.getAmusementBudget() + ","
+                    + user.getSavedAmount() + "," + user.getAnnualSavedAmount());
         }
 
-        // 将修改后的内容写入临时文件
+        // 写回临时文件然后替换
         try (PrintWriter writer = new PrintWriter(new FileWriter(tempFile))) {
-            for (String l : lines) {
-                writer.println(l);
-            }
+            for (String l : lines) writer.println(l);
         } catch (IOException e) {
             e.printStackTrace();
             return;
         }
 
-        // 删除原始文件，并将临时文件重命名
-        if (!inputFile.delete()) {
-            System.out.println("Could not delete original file.");
-            return;
-        }
-        if (!tempFile.renameTo(inputFile)) {
-            System.out.println("Could not rename temp file.");
-            return;
+        if (!inputFile.delete() || !tempFile.renameTo(inputFile)) {
+            System.err.println("Failed to update settings file");
         }
     }
+
 
     // 检查并重置月储蓄目标和月预算
     public void checkAndResetMonthlySettings(User user) {
