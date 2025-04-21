@@ -95,6 +95,7 @@ public class FormattedInput extends Application {
         primaryStage.show();
     }
 
+
     private HBox gethBox(Stage primaryStage) {
         Button importButton = new Button("Import CSV File");
         importButton.setOnAction(e -> importCSV(primaryStage));
@@ -108,9 +109,31 @@ public class FormattedInput extends Application {
         Button deleteButton = new Button("Delete Selected");
         deleteButton.setOnAction(e -> deleteSelectedRows());
 
-        HBox buttonBox = new HBox(10, importButton, templateButton, saveButton, deleteButton);
+        // 新增：返回 Dashboard 按钮
+        Button btnBack = new Button("Dashboard");
+        btnBack.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
+        btnBack.setOnAction(e -> {
+            try {
+                // 注：DashboardView 是你的主页面
+                DashboardView dashboard = new DashboardView();
+                dashboard.start(primaryStage);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        // 把 btnBack 放到 HBox 里
+        HBox buttonBox = new HBox(10,
+                importButton,
+                templateButton,
+                saveButton,
+                deleteButton,
+                btnBack    // <- 这里
+        );
+        buttonBox.setPadding(new Insets(10));
         return buttonBox;
     }
+
 
     private VBox createAddRecordForm() {
         VBox formBox = new VBox(10);
@@ -162,31 +185,28 @@ public class FormattedInput extends Application {
         TableView<ObservableStringArray> table = new TableView<>();
         table.setEditable(true);
 
-        // Create table columns
-        String[] headers = {"Source", "Date", "Amount", "Category", "Description"};
-        for (int i = 1; i < headers.length; i++) {
+        // 新增 User 列，Source 列，以及后续列
+        String[] headers = {"User", "Source", "Date", "Amount", "Category", "Description"};
+        for (int i = 0; i < headers.length; i++) {
             final int columnIndex = i;
             TableColumn<ObservableStringArray, String> column = new TableColumn<>(headers[i]);
-
-            // Set cell value factory
             column.setCellValueFactory(cellData -> cellData.getValue().getProperty(columnIndex));
-
-            // Make cells editable
-            column.setCellFactory(TextFieldTableCell.forTableColumn(new DefaultStringConverter()));
-
-            // Handle edit commits
-            column.setOnEditCommit(event -> {
-                ObservableStringArray row = event.getRowValue();
-                row.set(columnIndex, event.getNewValue());
-            });
-
-            column.setPrefWidth(150);
+            // 只有 Source 及后面的列可编辑，也可以选择允许 User 列不可编辑
+            if (i >= 1) {
+                column.setCellFactory(TextFieldTableCell.forTableColumn(new DefaultStringConverter()));
+                column.setOnEditCommit(event -> {
+                    ObservableStringArray row = event.getRowValue();
+                    row.set(columnIndex, event.getNewValue());
+                });
+            }
+            column.setPrefWidth(120);
             table.getColumns().add(column);
         }
 
         table.setItems(data);
         return table;
     }
+
 
     private void addRecord() {
         try {
@@ -206,17 +226,22 @@ public class FormattedInput extends Application {
 
             // Create record array
             String[] record = new String[6];
-            record[0] = "";  // User field empty
+            // 0: 当前用户名
+            record[0] = DashboardView.getCurrentUser().getUsername();
+            // 1: 手动添加的标记
             record[1] = "manual";
+            // 2: 日期
             record[2] = datePicker.getValue().format(DateTimeFormatter.ISO_DATE);
+            // 3: 金额
             record[3] = amountField.getText().trim();
+            // 4: 类别
             record[4] = categoryField.getText().trim().isEmpty() ? "Uncategorized" : categoryField.getText().trim();
+            // 5: 描述
             record[5] = descriptionField.getText().trim();
 
-            // Add to data list
             data.add(new ObservableStringArray(record));
 
-            // Clear form
+            // 清空表单
             datePicker.setValue(LocalDate.now());
             amountField.clear();
             categoryField.clear();
@@ -326,36 +351,61 @@ public class FormattedInput extends Application {
     }
 
     private void importRegularCSV(File file, String encoding) throws IOException {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), encoding))) {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(new FileInputStream(file), encoding))) {
             data.clear();
             String line;
             boolean isFirstLine = true;
 
             while ((line = reader.readLine()) != null) {
                 if (isFirstLine) {
-                    isFirstLine = false;
-                    continue; // Skip header
+                    isFirstLine = false;  // 跳过 header
+                    continue;
                 }
-
                 String[] rowData = parseCsvLine(line);
                 String[] record = new String[6];
-                record[0] = "To be imported"; // User
-                record[1] = "import"; // Source
-                record[2] = rowData.length > 0 ? rowData[0] : ""; // Date
-                record[3] = rowData.length > 1 ? rowData[1] : ""; // Amount
-                record[4] = rowData.length > 2 ? rowData[2] : "Uncategorized"; // Category
-                record[5] = rowData.length > 3 ? rowData[3] : ""; // Description
+
+                if (rowData.length >= 7) {
+                    // 格式：Id,User,Source,Date,Amount,Category,Description
+                    record[0] = rowData[1].trim();  // User
+                    record[1] = rowData[2].trim();  // Source
+                    record[2] = rowData[3].trim();  // Date
+                    record[3] = rowData[4].trim();  // Amount
+                    record[4] = rowData[5].trim();  // Category
+                    record[5] = rowData[6].trim();  // Description
+                } else {
+                    // 老格式：Date,Amount,Category,Description
+                    record[0] = DashboardView.getCurrentUser().getUsername();
+                    record[1] = "import";
+                    record[2] = rowData.length > 0 ? rowData[0] : "";
+                    record[3] = rowData.length > 1 ? rowData[1] : "";
+                    record[4] = rowData.length > 2 ? rowData[2] : "Uncategorized";
+                    record[5] = rowData.length > 3 ? rowData[3] : "";
+                }
 
                 data.add(new ObservableStringArray(record));
             }
 
+            // 导入完成后通知 Dashboard
+            DashboardView.setImportDone(true);
+
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Import Successful");
             alert.setHeaderText(null);
-            alert.setContentText("Successfully imported regular CSV file, encoding: " + encoding);
+            alert.setContentText("Successfully imported " + data.size() + " records (encoding: " + encoding + ")");
             alert.showAndWait();
+
+//            // 关闭本窗口并重启 Dashboard
+//            Stage curr = (Stage) tableView.getScene().getWindow();
+//            curr.close();
+//            new DashboardView().start(new Stage());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
+
+
+
 
     private void importWechatWithEncoding(String encoding) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(lastSelectedFile), encoding))) {
@@ -407,48 +457,51 @@ public class FormattedInput extends Application {
     }
 
     private void importAlipayWithEncoding(String encoding) {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(lastSelectedFile), encoding))) {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(new FileInputStream(lastSelectedFile), encoding))) {
             data.clear();
             String line;
-            int lineCount = 0;
 
-            // Skip first 25 lines
-            while (lineCount < 25 && (line = reader.readLine()) != null) {
-                lineCount++;
-            }
+            // 可选：只跳过第一行表头
+            reader.readLine();
 
-            // Process data from line 26
+            // 从文件第二行开始处理所有行
             while ((line = reader.readLine()) != null) {
                 String[] rowData = parseCsvLine(line);
-
                 if (rowData.length >= 7 && !isEmptyRow(rowData)) {
                     String[] fullRowData = new String[6];
 
-                    // Process date - extract date part
+                    // 解析并填充
                     String rawDate = rowData[0];
                     String processedDate = processDate(rawDate);
 
-                    fullRowData[0] = "Default User";        // User (hardcoded)
-                    fullRowData[1] = "alipay";             // Source
-                    fullRowData[2] = processedDate;       // Date (column 1, processed)
-                    fullRowData[3] = rowData[6];           // Amount (column 7)
-                    fullRowData[4] = "Uncategorized";     // Category (hardcoded)
-                    fullRowData[5] = rowData[1] + rowData[4]; // Description (columns 2+5 combined)
+                    fullRowData[0] = DashboardView.getCurrentUser().getUsername();  // 真实用户名
+                    fullRowData[1] = "alipay";
+                    fullRowData[2] = processedDate;
+                    fullRowData[3] = rowData[6];
+                    fullRowData[4] = "Uncategorized";
+                    fullRowData[5] = rowData[1] + rowData[4];
 
                     data.add(new ObservableStringArray(fullRowData));
                 }
             }
 
+            // 通知 Dashboard 显示图表（如果你用了那种逻辑）
+            DashboardView.setImportDone(true);
+
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Import Successful");
             alert.setHeaderText(null);
-            alert.setContentText("Successfully imported " + data.size() + " records from Alipay (encoding: " + encoding + ")");
+            alert.setContentText("Successfully imported "
+                    + data.size() + " records from Alipay (encoding: " + encoding + ")");
             alert.showAndWait();
 
         } catch (IOException e) {
-            showErrorAlert("Import Error", "Failed to import Alipay CSV with encoding " + encoding + ": " + e.getMessage());
+            showErrorAlert("Import Error",
+                    "Failed to import Alipay CSV with encoding " + encoding + ": " + e.getMessage());
         }
     }
+
 
     private boolean isEmptyRow(String[] rowData) {
         for (String cell : rowData) {
@@ -482,19 +535,21 @@ public class FormattedInput extends Application {
         fileChooser.getExtensionFilters().add(
                 new FileChooser.ExtensionFilter("CSV Files", "*.csv")
         );
-        fileChooser.setInitialFileName("csv_template.csv");
+        fileChooser.setInitialFileName("transactions.csv");
 
         File file = fileChooser.showSaveDialog(stage);
         if (file != null) {
-            try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
-                // Write header
-                writer.write("Date,Amount,Category,Description");
+            try (BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
+                // 写入与表格一致的表头：User,Source,Date,Amount,Category,Description
+                writer.write("User,Source,Date,Amount,Category,Description");
                 writer.newLine();
 
-                // Write sample data
-                writer.write("2025-04-13,5000,,Salary");
+                // 写入示例行：当前用户名,来源,日期,金额,类别,描述
+                String currentUser = DashboardView.getCurrentUser().getUsername();
+                writer.write(String.format("%s,manual,2025-04-13,5000,Uncategorized,Salary", currentUser));
                 writer.newLine();
-                writer.write("2025-04-14,-200,,Grocery Shopping");
+                writer.write(String.format("%s,manual,2025-04-14,-200,Uncategorized,Grocery Shopping", currentUser));
                 writer.newLine();
 
                 Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -508,6 +563,7 @@ public class FormattedInput extends Application {
             }
         }
     }
+
 
     private String[] parseCsvLine(String line) {
         List<String> tokens = new ArrayList<>();
