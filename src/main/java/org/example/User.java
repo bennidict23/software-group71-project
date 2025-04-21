@@ -21,13 +21,13 @@ public class User {
     public User(String username, String password) {
         this.username = username;
         this.password = password;
-        this.annualTarget = 0.0;
-        this.monthlyTarget = 0.0;
-        this.monthlyBudget = 0.0;
-        this.shoppingBudget = 0.0;
-        this.transportBudget = 0.0;
-        this.dietBudget = 0.0;
-        this.amusementBudget = 0.0;
+        this.annualTarget = 36000.0;
+        this.monthlyTarget = 3000.0;
+        this.monthlyBudget = 2000.0;
+        this.shoppingBudget = 500.0;
+        this.transportBudget = 500.0;
+        this.dietBudget = 500.0;
+        this.amusementBudget = 500.0;
         this.savedAmount = 2000.0;
         this.annualSavedAmount = 24000.0;
         this.currentYear = LocalDate.now().getYear();
@@ -139,12 +139,12 @@ public class User {
 
     // 新增方法：重置月目标和月预算
     public void resetMonthlySettings() {
-        this.monthlyTarget = 0.0;
-        this.monthlyBudget = 0.0;
-        this.shoppingBudget = 0.0;
-        this.transportBudget = 0.0;
-        this.dietBudget = 0.0;
-        this.amusementBudget = 0.0;
+        this.monthlyTarget = 3000.0;
+        this.monthlyBudget = 2000.0;
+        this.shoppingBudget = 500.0;
+        this.transportBudget = 500.0;
+        this.dietBudget = 500.0;
+        this.amusementBudget = 500.0;
     }
 
     // 新增方法：重置年目标和年预算

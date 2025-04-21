@@ -366,8 +366,8 @@ public class UserManager {
         }
 
         // 更新 savedAmount 和 annualSavedAmount
-        currentUser.setSavedAmount(currentUser.getSavedAmount() - newMonthlySpent + removedMonthlySpent);
-        currentUser.setAnnualSavedAmount(currentUser.getAnnualSavedAmount() - newYearlySpent + removedYearlySpent);
+        currentUser.setSavedAmount(currentUser.getSavedAmount() + newMonthlySpent + removedMonthlySpent);
+        currentUser.setAnnualSavedAmount(currentUser.getAnnualSavedAmount() + newYearlySpent + removedYearlySpent);
 
         // 保存更新后的设置
         saveUserSettings(currentUser);
