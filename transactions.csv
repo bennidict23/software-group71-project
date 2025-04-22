@@ -1,3 +1,4 @@
+Id,User,Source,Date,Amount,Category,Description
 1,1234,Cash,2024-05-15,-85.50,Groceries,Weekly groceries
 2,1234,OCBC,2024-06-20,-120.00,Utilities,Electricity bill
 3,1234,PayNow,2024-08-10,-65.30,Transportation,Train monthly pass
