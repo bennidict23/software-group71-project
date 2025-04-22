@@ -276,7 +276,7 @@ public class AnalysisView extends Application {
     /**
      * 主方法，用于单独运行此视图
      */
-    public static void main(String[] args) {
-        launch(args);
-    }
+//    public static void main(String[] args) {
+//        launch(args);
+//    }
 }
