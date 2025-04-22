@@ -93,7 +93,7 @@ public class DashboardView extends Application {
         userManager.checkAndResetMonthlySettings(currentUser);
 
         // 检查本月消费情况，为后续的预算和目标展示提供数据支持
-        userManager.checkMonthlyExpenses(currentUser);
+        //userManager.checkMonthlyExpenses(currentUser);
 
         primaryStage.setTitle("User Dashboard");
 

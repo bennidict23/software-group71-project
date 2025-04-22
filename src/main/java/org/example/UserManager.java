@@ -43,7 +43,7 @@ public class UserManager {
         file = new File(TRANSACTION_FILE);
         if (!file.exists()) {
             try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
-                writer.println("User,Source,Date,Amount,Category,Description");
+                writer.println("Id,User,Source,Date,Amount,Category,Description");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -202,7 +202,7 @@ public class UserManager {
             try (PrintWriter writer = new PrintWriter(new FileWriter(inputFile))) {
                 writer.println("username,annualTarget,monthlyTarget,monthlyBudget,"
                         + "shoppingBudget,transportBudget,dietBudget,amusementBudget,"
-                        + "savedAmount,annualSavedAmount");
+                        + "savedAmount,annualSavedAmount,currentYear,currentMonth");
             } catch (IOException e) {
                 e.printStackTrace();
                 return;
@@ -224,7 +224,8 @@ public class UserManager {
                     lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + ","
                             + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget() + ","
                             + user.getDietBudget() + "," + user.getAmusementBudget() + ","
-                            + user.getSavedAmount() + "," + user.getAnnualSavedAmount());
+                            + user.getSavedAmount() + "," + user.getAnnualSavedAmount() + ","
+                            + user.getCurrentYear() + "," + user.getCurrentMonth());
                     found = true;
                 } else {
                     lines.add(line);
@@ -238,7 +239,8 @@ public class UserManager {
             lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + ","
                     + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget() + ","
                     + user.getDietBudget() + "," + user.getAmusementBudget() + ","
-                    + user.getSavedAmount() + "," + user.getAnnualSavedAmount());
+                    + user.getSavedAmount() + "," + user.getAnnualSavedAmount() + ","
+                    + user.getCurrentYear() + "," + user.getCurrentMonth());
         }
 
         // 写回临时文件然后替换
@@ -253,7 +255,6 @@ public class UserManager {
             System.err.println("Failed to update settings file");
         }
     }
-
 
     // 检查并重置月储蓄目标和月预算
     public void checkAndResetMonthlySettings(User user) {
@@ -366,8 +367,8 @@ public class UserManager {
         }
 
         // 更新 savedAmount 和 annualSavedAmount
-        currentUser.setSavedAmount(currentUser.getSavedAmount() + newMonthlySpent + removedMonthlySpent);
-        currentUser.setAnnualSavedAmount(currentUser.getAnnualSavedAmount() + newYearlySpent + removedYearlySpent);
+        currentUser.setSavedAmount(currentUser.getSavedAmount() + newMonthlySpent - removedMonthlySpent);
+        currentUser.setAnnualSavedAmount(currentUser.getAnnualSavedAmount() + newYearlySpent - removedYearlySpent);
 
         // 保存更新后的设置
         saveUserSettings(currentUser);
@@ -402,90 +403,90 @@ public class UserManager {
         }
     }
 
-    public void checkMonthlyExpenses(User user) {
-        String username = user.getUsername();
-        double shoppingSpent = 0.0;
-        double transportSpent = 0.0;
-        double dietSpent = 0.0;
-        double amusementSpent = 0.0;
-        double totalSpent = 0.0;
+//    public void checkMonthlyExpenses(User user) {
+//        String username = user.getUsername();
+//        double shoppingSpent = 0.0;
+//        double transportSpent = 0.0;
+//        double dietSpent = 0.0;
+//        double amusementSpent = 0.0;
+//        double totalSpent = 0.0;
+//
+//        try (BufferedReader br = new BufferedReader(new FileReader(TRANSACTION_FILE))) {
+//            String line;
+//            br.readLine(); // 跳过标题行
+//            while ((line = br.readLine()) != null) {
+//                String[] parts = line.split(",");
+//                if (parts.length >= 7 && parts[1].equals(username)) {
+//                    String dateStr = parts[3];
+//                    double amount = Double.parseDouble(parts[4]);
+//                    String category = parts[5];
+//
+//                    // 解析日期
+//                    // 先把所有"/"换成"-"，再用 yyyy-MM-dd 模式解析日期
+//                    String normalized = dateStr.trim().replace('/', '-');
+//                    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+//                    LocalDate date;
+//                    try {
+//                        date = LocalDate.parse(normalized, fmt);
+//                    } catch (DateTimeParseException ex) {
+//                        // 如果还是解析失败，就跳过这条记录
+//                        continue;
+//                    }
+//
+//                    // 检查是否为本月的交易
+//                    if (date.getYear() == LocalDate.now().getYear()
+//                            && date.getMonthValue() == LocalDate.now().getMonthValue()) {
+//                        switch (category.toLowerCase()) {
+//                            case "shopping":
+//                                shoppingSpent += amount;
+//                                break;
+//                            case "transport":
+//                                transportSpent += amount;
+//                                break;
+//                            case "diet":
+//                                dietSpent += amount;
+//                                break;
+//                            case "amusement":
+//                                amusementSpent += amount;
+//                                break;
+//                        }
+//                        totalSpent += amount;
+//                    }
+//                }
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//
+//        // 检查是否超过预算并发出警告
+//        if (shoppingSpent > user.getShoppingBudget()) {
+//            showAlert("Warning",
+//                    "Shopping budget exceeded: $" + shoppingSpent + " (Budget: $" + user.getShoppingBudget() + ")");
+//        }
+//        if (transportSpent > user.getTransportBudget()) {
+//            showAlert("Warning",
+//                    "Transport budget exceeded: $" + transportSpent + " (Budget: $" + user.getTransportBudget() + ")");
+//        }
+//        if (dietSpent > user.getDietBudget()) {
+//            showAlert("Warning", "Diet budget exceeded: $" + dietSpent + " (Budget: $" + user.getDietBudget() + ")");
+//        }
+//        if (amusementSpent > user.getAmusementBudget()) {
+//            showAlert("Warning",
+//                    "Amusement budget exceeded: $" + amusementSpent + " (Budget: $" + user.getAmusementBudget() + ")");
+//        }
+//        if (totalSpent > user.getMonthlyBudget()) {
+//            showAlert("Warning",
+//                    "Total monthly budget exceeded: $" + totalSpent + " (Budget: $" + user.getMonthlyBudget() + ")");
+//        }
+//    }
 
-        try (BufferedReader br = new BufferedReader(new FileReader(TRANSACTION_FILE))) {
-            String line;
-            br.readLine(); // 跳过标题行
-            while ((line = br.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length >= 7 && parts[1].equals(username)) {
-                    String dateStr = parts[3];
-                    double amount = Double.parseDouble(parts[4]);
-                    String category = parts[5];
-
-                    // 解析日期
-                    // 先把所有"/"换成"-"，再用 yyyy-MM-dd 模式解析日期
-                    String normalized = dateStr.trim().replace('/', '-');
-                    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-                    LocalDate date;
-                    try {
-                        date = LocalDate.parse(normalized, fmt);
-                    } catch (DateTimeParseException ex) {
-                        // 如果还是解析失败，就跳过这条记录
-                        continue;
-                    }
-
-                    // 检查是否为本月的交易
-                    if (date.getYear() == LocalDate.now().getYear()
-                            && date.getMonthValue() == LocalDate.now().getMonthValue()) {
-                        switch (category.toLowerCase()) {
-                            case "shopping":
-                                shoppingSpent += amount;
-                                break;
-                            case "transport":
-                                transportSpent += amount;
-                                break;
-                            case "diet":
-                                dietSpent += amount;
-                                break;
-                            case "amusement":
-                                amusementSpent += amount;
-                                break;
-                        }
-                        totalSpent += amount;
-                    }
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        // 检查是否超过预算并发出警告
-        if (shoppingSpent > user.getShoppingBudget()) {
-            showAlert("Warning",
-                    "Shopping budget exceeded: $" + shoppingSpent + " (Budget: $" + user.getShoppingBudget() + ")");
-        }
-        if (transportSpent > user.getTransportBudget()) {
-            showAlert("Warning",
-                    "Transport budget exceeded: $" + transportSpent + " (Budget: $" + user.getTransportBudget() + ")");
-        }
-        if (dietSpent > user.getDietBudget()) {
-            showAlert("Warning", "Diet budget exceeded: $" + dietSpent + " (Budget: $" + user.getDietBudget() + ")");
-        }
-        if (amusementSpent > user.getAmusementBudget()) {
-            showAlert("Warning",
-                    "Amusement budget exceeded: $" + amusementSpent + " (Budget: $" + user.getAmusementBudget() + ")");
-        }
-        if (totalSpent > user.getMonthlyBudget()) {
-            showAlert("Warning",
-                    "Total monthly budget exceeded: $" + totalSpent + " (Budget: $" + user.getMonthlyBudget() + ")");
-        }
-    }
-
-    private void showAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
+//    private void showAlert(String title, String message) {
+//        Alert alert = new Alert(Alert.AlertType.WARNING);
+//        alert.setTitle(title);
+//        alert.setHeaderText(null);
+//        alert.setContentText(message);
+//        alert.showAndWait();
+//    }
 
     // 关闭定时任务
     public void shutdownScheduler() {
