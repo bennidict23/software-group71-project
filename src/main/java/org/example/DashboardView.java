@@ -52,7 +52,7 @@ public class DashboardView extends Application {
 
     /**
      * 设置当前用户，静态方法，方便从外部设置当前登录用户。
-     * 
+     *
      * @param user 当前登录用户
      */
     public static void setCurrentUser(User user) {
@@ -61,7 +61,7 @@ public class DashboardView extends Application {
 
     /**
      * 获取当前用户，静态方法，方便在类的其他方法中获取当前登录用户。
-     * 
+     *
      * @return 当前登录用户
      */
     public static User getCurrentUser() {
@@ -70,7 +70,7 @@ public class DashboardView extends Application {
 
     /**
      * 启动仪表盘界面。
-     * 
+     *
      * @param primaryStage 主舞台
      * @throws Exception 异常
      */
@@ -258,7 +258,7 @@ public class DashboardView extends Application {
 
     /**
      * 显示密码修改对话框。
-     * 
+     *
      * @param owner 父级舞台
      */
     private void showChangePasswordDialog(Stage owner) {
@@ -315,7 +315,7 @@ public class DashboardView extends Application {
 
     /**
      * 显示目标设置对话框。
-     * 
+     *
      * @param owner 父级舞台
      */
     private void showGoalDialog(Stage owner) {
@@ -417,7 +417,7 @@ public class DashboardView extends Application {
 
     /**
      * 显示预算设置对话框。
-     * 
+     *
      * @param owner 父级舞台
      */
     private void showBudgetDialog(Stage owner) {
@@ -596,7 +596,7 @@ public class DashboardView extends Application {
 
     /**
      * 显示提示对话框。
-     * 
+     *
      * @param type    对话框类型
      * @param title   对话框标题
      * @param message 对话框内容
@@ -611,7 +611,7 @@ public class DashboardView extends Application {
 
     /**
      * 用户登出逻辑。
-     * 
+     *
      * @param primaryStage 主舞台
      */
     private void logout(Stage primaryStage) {
