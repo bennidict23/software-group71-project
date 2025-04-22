@@ -1,6 +1,8 @@
 package org.example;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class User {
     private String username;
@@ -16,7 +18,7 @@ public class User {
     private double annualSavedAmount;
     private int currentYear;
     private int currentMonth;
-
+    private List<String> warnings; // 新增警告信息列表
     public User(String username, String password) {
         this.username = username;
         this.password = password;
@@ -31,6 +33,8 @@ public class User {
         this.annualSavedAmount = 24000.0;
         this.currentYear = LocalDate.now().getYear();
         this.currentMonth = LocalDate.now().getMonthValue();
+        // 初始化警告信息列表
+        this.warnings = new ArrayList<>();
     }
 
     // Getters and Setters for all fields
@@ -139,6 +143,14 @@ public class User {
 
     public void setCurrentMonth(int currentMonth) {
         this.currentMonth = currentMonth;
+    }
+
+    public List<String> getWarnings() {
+        return warnings;
+    }
+
+    public void setWarnings(List<String> warnings) {
+        this.warnings = warnings;
     }
 
     // 新增方法：更新当前年份和月份
