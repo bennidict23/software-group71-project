@@ -7,7 +7,6 @@ import java.io.*;
 import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -216,7 +215,9 @@ public class UserManager {
         // 下面就照原来的逻辑：先把所有行读进来，更新这一行，然后写回……
         try (BufferedReader br = new BufferedReader(new FileReader(inputFile))) {
             String line = br.readLine();
-            if (line != null) lines.add(line);
+            if (line != null) {
+                lines.add(line);
+            }
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
                 if (parts[0].equals(user.getUsername())) {
@@ -245,7 +246,9 @@ public class UserManager {
 
         // 写回临时文件然后替换
         try (PrintWriter writer = new PrintWriter(new FileWriter(tempFile))) {
-            for (String l : lines) writer.println(l);
+            for (String l : lines) {
+                writer.println(l);
+            }
         } catch (IOException e) {
             e.printStackTrace();
             return;
@@ -403,90 +406,87 @@ public class UserManager {
         }
     }
 
-//    public void checkMonthlyExpenses(User user) {
-//        String username = user.getUsername();
-//        double shoppingSpent = 0.0;
-//        double transportSpent = 0.0;
-//        double dietSpent = 0.0;
-//        double amusementSpent = 0.0;
-//        double totalSpent = 0.0;
-//
-//        try (BufferedReader br = new BufferedReader(new FileReader(TRANSACTION_FILE))) {
-//            String line;
-//            br.readLine(); // 跳过标题行
-//            while ((line = br.readLine()) != null) {
-//                String[] parts = line.split(",");
-//                if (parts.length >= 7 && parts[1].equals(username)) {
-//                    String dateStr = parts[3];
-//                    double amount = Double.parseDouble(parts[4]);
-//                    String category = parts[5];
-//
-//                    // 解析日期
-//                    // 先把所有"/"换成"-"，再用 yyyy-MM-dd 模式解析日期
-//                    String normalized = dateStr.trim().replace('/', '-');
-//                    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-//                    LocalDate date;
-//                    try {
-//                        date = LocalDate.parse(normalized, fmt);
-//                    } catch (DateTimeParseException ex) {
-//                        // 如果还是解析失败，就跳过这条记录
-//                        continue;
-//                    }
-//
-//                    // 检查是否为本月的交易
-//                    if (date.getYear() == LocalDate.now().getYear()
-//                            && date.getMonthValue() == LocalDate.now().getMonthValue()) {
-//                        switch (category.toLowerCase()) {
-//                            case "shopping":
-//                                shoppingSpent += amount;
-//                                break;
-//                            case "transport":
-//                                transportSpent += amount;
-//                                break;
-//                            case "diet":
-//                                dietSpent += amount;
-//                                break;
-//                            case "amusement":
-//                                amusementSpent += amount;
-//                                break;
-//                        }
-//                        totalSpent += amount;
-//                    }
-//                }
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//
-//        // 检查是否超过预算并发出警告
-//        if (shoppingSpent > user.getShoppingBudget()) {
-//            showAlert("Warning",
-//                    "Shopping budget exceeded: $" + shoppingSpent + " (Budget: $" + user.getShoppingBudget() + ")");
-//        }
-//        if (transportSpent > user.getTransportBudget()) {
-//            showAlert("Warning",
-//                    "Transport budget exceeded: $" + transportSpent + " (Budget: $" + user.getTransportBudget() + ")");
-//        }
-//        if (dietSpent > user.getDietBudget()) {
-//            showAlert("Warning", "Diet budget exceeded: $" + dietSpent + " (Budget: $" + user.getDietBudget() + ")");
-//        }
-//        if (amusementSpent > user.getAmusementBudget()) {
-//            showAlert("Warning",
-//                    "Amusement budget exceeded: $" + amusementSpent + " (Budget: $" + user.getAmusementBudget() + ")");
-//        }
-//        if (totalSpent > user.getMonthlyBudget()) {
-//            showAlert("Warning",
-//                    "Total monthly budget exceeded: $" + totalSpent + " (Budget: $" + user.getMonthlyBudget() + ")");
-//        }
-//    }
 
-//    private void showAlert(String title, String message) {
-//        Alert alert = new Alert(Alert.AlertType.WARNING);
-//        alert.setTitle(title);
-//        alert.setHeaderText(null);
-//        alert.setContentText(message);
-//        alert.showAndWait();
-//    }
+
+    public void checkMonthlyExpenses(User user) {
+        String username = user.getUsername();
+        double shoppingSpent = 0.0;
+        double transportSpent = 0.0;
+        double dietSpent = 0.0;
+        double amusementSpent = 0.0;
+        double totalSpent = 0.0;
+
+        List<String> warnings = new ArrayList<>(); // 用于存储警告信息
+
+        try (BufferedReader br = new BufferedReader(new FileReader(TRANSACTION_FILE))) {
+            String line;
+            br.readLine(); // 跳过标题行
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 7 && parts[1].equals(username)) {
+                    String dateStr = parts[3];
+                    double amount = Double.parseDouble(parts[4]);
+                    String category = parts[5];
+
+                    // 解析日期
+                    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                    LocalDate date = LocalDate.parse(dateStr, fmt);
+
+                    // 检查是否为本月的交易
+                    if (date.getYear() == LocalDate.now().getYear()
+                            && date.getMonthValue() == LocalDate.now().getMonthValue()) {
+                        switch (category.toLowerCase()) {
+                            case "shopping":
+                                shoppingSpent -= amount;
+                                break;
+                            case "transport":
+                                transportSpent -= amount;
+                                break;
+                            case "diet":
+                                dietSpent -= amount;
+                                break;
+                            case "amusement":
+                                amusementSpent -= amount;
+                                break;
+                        }
+                        totalSpent += amount;
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // 检查是否超过预算并记录警告
+        if (shoppingSpent > user.getShoppingBudget()) {
+            warnings.add("Shopping budget exceeded: $" + shoppingSpent + " (Budget: $" + user.getShoppingBudget() + ")");
+        }
+        if (transportSpent > user.getTransportBudget()) {
+            warnings.add("Transport budget exceeded: $" + transportSpent + " (Budget: $" + user.getTransportBudget() + ")");
+        }
+        if (dietSpent > user.getDietBudget()) {
+            warnings.add("Diet budget exceeded: $" + dietSpent + " (Budget: $" + user.getDietBudget() + ")");
+        }
+        if (amusementSpent > user.getAmusementBudget()) {
+            warnings.add("Amusement budget exceeded: $" + amusementSpent + " (Budget: $" + user.getAmusementBudget() + ")");
+        }
+        if (totalSpent > user.getMonthlyBudget()) {
+            warnings.add("Total monthly budget exceeded: $" + totalSpent + " (Budget: $" + user.getMonthlyBudget() + ")");
+        }
+
+        // 将警告信息存储到用户对象中
+        user.setWarnings(warnings);
+    }
+
+
+
+    private void showAlert(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
 
     // 关闭定时任务
     public void shutdownScheduler() {

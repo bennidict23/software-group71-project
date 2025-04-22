@@ -15,6 +15,7 @@ import org.example.list.TransactionViewer;
 
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -93,7 +94,8 @@ public class DashboardView extends Application {
         userManager.checkAndResetMonthlySettings(currentUser);
 
         // 检查本月消费情况，为后续的预算和目标展示提供数据支持
-        //userManager.checkMonthlyExpenses(currentUser);
+        userManager.checkMonthlyExpenses(currentUser);
+        List<String> warnings = currentUser.getWarnings();
 
         primaryStage.setTitle("User Dashboard");
 
@@ -226,6 +228,15 @@ public class DashboardView extends Application {
                 stop(); // 调用 stop 方法来停止程序
             } catch (Exception e) {
                 e.printStackTrace();
+            }
+        });
+
+        // 显示警告弹窗（如果存在警告）
+        Platform.runLater(() -> {
+            if (warnings != null && !warnings.isEmpty()) {
+                for (String warning : warnings) {
+                    showAlert(Alert.AlertType.WARNING, "Warning", warning);
+                }
             }
         });
 
@@ -408,7 +419,6 @@ public class DashboardView extends Application {
                         + "% (" + currentUser.getSavedAmount() + " saved)");
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Monthly target updated to: " + newMonthly);
                 userManager.saveUserSettings(currentUser);
-                dialog.close();
             } catch (NumberFormatException ex) {
                 showAlert(Alert.AlertType.ERROR, "Error", "Please enter a valid monthly target number.");
             }
