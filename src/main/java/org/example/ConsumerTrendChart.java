@@ -6,6 +6,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.HashMap;
@@ -20,51 +21,54 @@ public class ConsumerTrendChart {
         this.currentUser = currentUser;
     }
 
+    /**
+     * 把折线图换成 7 个月趋势
+     */
     public LineChart<String, Number> createChart() {
         CategoryAxis xAxis = new CategoryAxis();
-        xAxis.setLabel("Date");
+        xAxis.setLabel("Month");
         NumberAxis yAxis = new NumberAxis();
         yAxis.setLabel("Total Spent ($)");
+        yAxis.setForceZeroInRange(false);
 
-        LineChart<String, Number> lineChart = new LineChart<>(xAxis, yAxis);
-        lineChart.setTitle("7‑Day Spending Trend");
-        // 不显示图例（因为只有一条线，无需 source 图例）
-        lineChart.setLegendVisible(false);
+        LineChart<String, Number> chart = new LineChart<>(xAxis, yAxis);
+        chart.setTitle("7‑Month Spending Trend");
 
-        // 构造一个「汇总」系列
-        XYChart.Series<String, Number> totalSeries = new XYChart.Series<>();
-        totalSeries.setName("Total Spending");
+        // 构造一个系列
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName("Spending");
 
-        // calculateDailySpending 已经把所有 source 的金额按日期累加到一起了
-        Map<LocalDate, Double> daily = calculateDailySpending();
-        for (Map.Entry<LocalDate, Double> e : daily.entrySet()) {
-            totalSeries.getData().add(
-                    new XYChart.Data<>(e.getKey().toString(), e.getValue())
-            );
+        // 拿到按月聚合的数据
+        Map<YearMonth, Double> monthly = calculateMonthlySpending();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy‑MM");
+        for (Map.Entry<YearMonth, Double> e : monthly.entrySet()) {
+            series.getData().add(new XYChart.Data<>(
+                    e.getKey().format(fmt),
+                    e.getValue()
+            ));
         }
 
-        lineChart.getData().add(totalSeries);
-        return lineChart;
+        chart.getData().add(series);
+        return chart;
     }
 
-    private Map<LocalDate, Double> calculateDailySpending() {
-        Map<LocalDate, Double> dailySpending = new HashMap<>();
-        LocalDate today = LocalDate.now();
-        LocalDate sevenDaysAgo = today.minusDays(6);
+    /**
+     * 聚合过去 7 个月（含当月）的消费金额
+     */
+    private Map<YearMonth, Double> calculateMonthlySpending() {
+        Map<YearMonth, Double> monthlySpending = new HashMap<>();
+        YearMonth current = YearMonth.now();
+        YearMonth sixMonthsAgo = current.minusMonths(6);
 
         try (BufferedReader br = new BufferedReader(new FileReader(TRANSACTION_FILE))) {
             // 跳过表头
             String line = br.readLine();
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
-
-                // 至少要有 7 列：Id,User,Source,Date,Amount,Category,Description
                 if (parts.length < 7) continue;
-
-                // user 在 parts[1]，date 在 parts[3]，amount 在 parts[4]
+                // 只统计本用户
                 if (!parts[1].equals(currentUser.getUsername())) continue;
-
-                // 解析日期（兼容 yyyy‑MM‑dd 或者 yyyy/M/d）
+                // 解析日期
                 String raw = parts[3].replace('/', '-').trim();
                 LocalDate date;
                 try {
@@ -72,24 +76,23 @@ public class ConsumerTrendChart {
                 } catch (DateTimeParseException ex) {
                     date = LocalDate.parse(raw, DateTimeFormatter.ofPattern("yyyy-M-d"));
                 }
-
-                // 金额
+                YearMonth ym = YearMonth.from(date);
+                // 只保留最近 6 个月 + 本月
+                if (ym.isBefore(sixMonthsAgo) || ym.isAfter(current)) continue;
                 double amt = Double.parseDouble(parts[4]);
-
-                if (!date.isBefore(sevenDaysAgo) && !date.isAfter(today)) {
-                    dailySpending.merge(date, amt, Double::sum);
-                }
+                monthlySpending.merge(ym, amt, Double::sum);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        // 保证每一天都有一个点
-        for (LocalDate d = sevenDaysAgo; !d.isAfter(today); d = d.plusDays(1)) {
-            dailySpending.putIfAbsent(d, 0.0);
+        // 补齐缺失的月份
+        for (YearMonth ym = sixMonthsAgo; !ym.isAfter(current); ym = ym.plusMonths(1)) {
+            monthlySpending.putIfAbsent(ym, 0.0);
         }
 
-        return new TreeMap<>(dailySpending);
+        // 按月排序
+        return new TreeMap<>(monthlySpending);
     }
 
 }
