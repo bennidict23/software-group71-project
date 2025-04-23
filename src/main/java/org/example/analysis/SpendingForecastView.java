@@ -1,5 +1,6 @@
 package org.example.analysis;
 
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.chart.LineChart;
@@ -14,6 +15,7 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import org.example.DashboardView;
 import org.example.User;
+import org.example.utils.LoadingUtils;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -40,6 +42,7 @@ public class SpendingForecastView extends BorderPane {
     private Map<String, Double> forecastSpending = new LinkedHashMap<>();
 
     // UI组件
+    private StackPane rootPane;
     private VBox contentContainer;
     private ComboBox<String> historicalPeriodSelector;
     private ComboBox<String> forecastPeriodSelector;
@@ -58,20 +61,18 @@ public class SpendingForecastView extends BorderPane {
         // 创建UI布局
         setupUI();
 
-        // 加载历史数据
-        loadHistoricalData();
-
-        // 生成预测
-        generateForecast();
-
-        // 创建图表
-        createChart();
+        // 后台加载数据
+        loadDataInBackground();
     }
 
     /**
      * 设置UI组件和布局
      */
     private void setupUI() {
+        // 创建根容器为StackPane，用于显示加载指示器
+        rootPane = new StackPane();
+        rootPane.setPadding(new Insets(0));
+
         // 创建标题
         Label titleLabel = new Label("Spending Forecast Analysis");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
@@ -93,7 +94,34 @@ public class SpendingForecastView extends BorderPane {
         // 创建总体容器
         VBox mainContainer = new VBox(15);
         mainContainer.getChildren().addAll(titleLabel, controlPanel, contentContainer, explanationText);
-        this.setCenter(mainContainer);
+
+        // 将主容器添加到根容器
+        rootPane.getChildren().add(mainContainer);
+
+        // 设置根容器为当前BorderPane的中心
+        this.setCenter(rootPane);
+    }
+
+    /**
+     * 在后台线程中加载数据
+     */
+    private void loadDataInBackground() {
+        // 创建后台任务
+        Task<Void> loadDataTask = new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                // 执行耗时操作
+                loadHistoricalData();
+                generateForecast();
+                return null;
+            }
+        };
+
+        // 显示加载指示器并执行任务
+        LoadingUtils.showLoadingIndicator(rootPane, loadDataTask, result -> {
+            // 任务完成后的操作（在UI线程中执行）
+            createChart();
+        });
     }
 
     /**
@@ -111,8 +139,8 @@ public class SpendingForecastView extends BorderPane {
         historicalLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
 
         historicalPeriodSelector = new ComboBox<>();
-        historicalPeriodSelector.getItems().addAll("Last 3 Months", "Last 6 Months", "Last Year", "All Available Data");
-        historicalPeriodSelector.setValue("Last 6 Months");
+        historicalPeriodSelector.getItems().addAll("All Available Data", "Last 3 Months", "Last 6 Months", "Last Year");
+        historicalPeriodSelector.setValue("All Available Data");
         historicalPeriodSelector.setMinWidth(150);
         historicalPeriodSelector.setOnAction(e -> refreshData());
 
@@ -174,7 +202,8 @@ public class SpendingForecastView extends BorderPane {
         System.out.println("交易文件路径: " + transactionFile.getAbsolutePath());
         System.out.println("文件是否存在: " + transactionFile.exists());
         System.out.println("当前用户: " + (currentUser != null ? currentUser.getUsername() : "null"));
-        System.out.println("开始日期: " + startDate);
+        System.out.println("分析数据的开始日期: " + startDate);
+        System.out.println("选定的数据周期: " + period);
 
         try (BufferedReader reader = new BufferedReader(new FileReader(transactionFile))) {
             // 跳过标题行
@@ -186,28 +215,35 @@ public class SpendingForecastView extends BorderPane {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
             int lineCount = 0;
             int processedCount = 0;
+            int skippedCount = 0;
+            int dateFilteredCount = 0;
 
             while ((line = reader.readLine()) != null) {
                 lineCount++;
                 String[] parts = line.split(",");
 
                 // 验证数据格式
-                if (parts.length < 7) {
-                    System.out.println("第 " + lineCount + " 行数据不足: " + line);
+                if (parts.length < 6) {
+                    System.out
+                            .println("跳过第 " + lineCount + " 行: 列数不足 (需要至少6列), 实际列数: " + parts.length + ", 数据: " + line);
+                    skippedCount++;
                     continue;
                 }
 
                 try {
-                    // 解析日期在索引3 (Date列)
-                    LocalDate date = LocalDate.parse(parts[3], formatter);
+                    // 解析日期在索引2 (Date列)
+                    LocalDate date = LocalDate.parse(parts[2], formatter);
 
                     // 检查日期是否在选定的时间范围内
                     if (date.isBefore(startDate)) {
+                        dateFilteredCount++;
                         continue;
                     }
 
-                    // 金额在索引4 (Amount列)
-                    double amount = Double.parseDouble(parts[4]);
+                    // 金额在索引3 (Amount列)
+                    double amount = Double.parseDouble(parts[3]);
+
+                    System.out.println("处理第 " + lineCount + " 行: 日期=" + date + ", 金额=" + amount);
 
                     // 仅考虑支出（负数金额）
                     if (amount < 0) {
@@ -218,14 +254,21 @@ public class SpendingForecastView extends BorderPane {
                         // 累加到月度总计
                         monthlySpending.put(month, monthlySpending.getOrDefault(month, 0.0) + amount);
                         System.out.println("添加月度支出: " + month + " = " + amount);
+                    } else {
+                        System.out.println("跳过第 " + lineCount + " 行: 非支出交易 (金额不是负数)");
+                        skippedCount++;
                     }
                 } catch (Exception e) {
-                    System.out.println("解析第 " + lineCount + " 行出错: " + e.getMessage());
+                    System.out.println("解析第 " + lineCount + " 行出错: " + e.getMessage() + ", 原始数据: " + line);
+                    skippedCount++;
                     continue;
                 }
             }
 
-            System.out.println("处理完成。总共处理 " + processedCount + " 条支出记录");
+            System.out.println("处理完成。总行数: " + lineCount);
+            System.out.println("有效支出记录数: " + processedCount);
+            System.out.println("因日期范围被过滤的行数: " + dateFilteredCount);
+            System.out.println("被跳过的行数: " + skippedCount);
             System.out.println("月度数据总数: " + monthlySpending.size());
 
         } catch (IOException e) {
@@ -415,11 +458,25 @@ public class SpendingForecastView extends BorderPane {
     }
 
     /**
-     * 刷新所有数据和图表
+     * 刷新数据
      */
     private void refreshData() {
-        loadHistoricalData();
-        generateForecast();
-        createChart();
+        // 创建后台任务
+        Task<Void> refreshTask = new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                loadHistoricalData();
+                generateForecast();
+                return null;
+            }
+        };
+
+        // 显示加载指示器并执行任务
+        LoadingUtils.showLoadingIndicator(rootPane, refreshTask, result -> {
+            // 清除现有图表
+            contentContainer.getChildren().clear();
+            // 重新创建图表
+            createChart();
+        });
     }
 }

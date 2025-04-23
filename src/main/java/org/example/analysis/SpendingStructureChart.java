@@ -5,6 +5,7 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
+import javafx.scene.Node;
 import javafx.scene.chart.PieChart;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -13,6 +14,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import org.example.User;
+import org.example.utils.LoadingUtils;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -22,6 +24,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import javafx.concurrent.Task;
 
 /**
  * 支出结构饼图类
@@ -34,6 +37,7 @@ public class SpendingStructureChart extends BorderPane {
     private final Map<String, Double> categoryTotals = new HashMap<>();
     private double totalSpending = 0.0;
 
+    private StackPane rootPane;
     private ComboBox<String> periodSelector;
     private PieChart chart;
     private VBox chartContainer;
@@ -50,17 +54,18 @@ public class SpendingStructureChart extends BorderPane {
 
         setupLayout();
 
-        // 加载数据
-        loadTransactionData();
-
-        // 创建图表
-        setupChart();
+        // 后台加载数据
+        loadDataInBackground();
     }
 
     /**
      * 设置布局结构
      */
     private void setupLayout() {
+        // 创建根容器为StackPane，用于显示加载指示器
+        rootPane = new StackPane();
+        rootPane.setPadding(new Insets(0));
+
         // 创建标题
         Label titleLabel = new Label("Spending Structure Analysis");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
@@ -82,7 +87,33 @@ public class SpendingStructureChart extends BorderPane {
         // 创建总体容器
         VBox mainContainer = new VBox(15);
         mainContainer.getChildren().addAll(titleLabel, controlPanel, chartContainer, explanationText);
-        this.setCenter(mainContainer);
+
+        // 将主容器添加到根容器
+        rootPane.getChildren().add(mainContainer);
+
+        // 设置根容器为当前BorderPane的中心
+        this.setCenter(rootPane);
+    }
+
+    /**
+     * 在后台线程中加载数据
+     */
+    private void loadDataInBackground() {
+        // 创建后台任务
+        Task<Void> loadDataTask = new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                // 执行耗时操作
+                loadTransactionData();
+                return null;
+            }
+        };
+
+        // 显示加载指示器并执行任务
+        LoadingUtils.showLoadingIndicator(rootPane, loadDataTask, result -> {
+            // 任务完成后的操作（在UI线程中执行）
+            setupChart();
+        });
     }
 
     /**
@@ -123,7 +154,7 @@ public class SpendingStructureChart extends BorderPane {
 
         // 获取选定的时间周期
         String period = periodSelector.getValue();
-        LocalDate startDate = calculateStartDate(period);
+        LocalDate startDate = calculateHistoricalStartDate(period);
 
         // 尝试多个可能的文件路径
         File transactionFile = new File(TRANSACTION_FILE);
@@ -131,8 +162,12 @@ public class SpendingStructureChart extends BorderPane {
             // 尝试项目根目录
             transactionFile = new File("transactions.csv");
             if (!transactionFile.exists()) {
-                // 尝试从当前工作目录的根开始查找
-                transactionFile = new File(System.getProperty("user.dir"), "transactions.csv");
+                // 尝试categorized版本
+                transactionFile = new File("transactions_categorized.csv");
+                if (!transactionFile.exists()) {
+                    // 尝试从当前工作目录的根开始查找
+                    transactionFile = new File(System.getProperty("user.dir"), "transactions.csv");
+                }
             }
         }
 
@@ -142,10 +177,42 @@ public class SpendingStructureChart extends BorderPane {
         System.out.println("开始日期: " + startDate);
 
         try (BufferedReader reader = new BufferedReader(new FileReader(transactionFile))) {
-            // 跳过标题行
+            // 读取标题行
             String header = reader.readLine();
             System.out.println("CSV标题: " + header);
             System.out.println("成功打开交易文件");
+
+            // 解析标题获取列索引
+            String[] headers = header.split(",");
+            int userIdx = -1, dateIdx = -1, amountIdx = -1, categoryIdx = -1, descriptionIdx = -1;
+
+            // 查找列索引
+            for (int i = 0; i < headers.length; i++) {
+                String col = headers[i].trim().toLowerCase();
+                if (col.equals("user"))
+                    userIdx = i;
+                else if (col.equals("date"))
+                    dateIdx = i;
+                else if (col.equals("amount"))
+                    amountIdx = i;
+                else if (col.equals("category"))
+                    categoryIdx = i;
+                else if (col.equals("description"))
+                    descriptionIdx = i;
+            }
+
+            // 验证必要的列是否存在
+            if (dateIdx == -1 || amountIdx == -1) {
+                System.err.println("CSV文件缺少必要的Date或Amount列");
+                return;
+            }
+
+            // 记录列索引情况
+            System.out.println("CSV列索引: User=" + userIdx +
+                    ", Date=" + dateIdx +
+                    ", Amount=" + amountIdx +
+                    ", Category=" + categoryIdx +
+                    ", Description=" + descriptionIdx);
 
             String line;
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -157,24 +224,41 @@ public class SpendingStructureChart extends BorderPane {
                 String[] parts = line.split(",");
 
                 // 检查数据格式
-                if (parts.length < 7) {
+                if (parts.length <= Math.max(dateIdx, amountIdx)) {
                     System.out.println("第 " + lineCount + " 行数据不足: " + line);
                     continue;
                 }
 
                 try {
-                    // 解析日期在索引3 (Date列)
-                    LocalDate date = LocalDate.parse(parts[3], formatter);
+                    // 解析日期
+                    LocalDate date = LocalDate.parse(parts[dateIdx], formatter);
 
                     // 检查日期是否在选定的时间范围内
                     if (date.isBefore(startDate)) {
                         continue;
                     }
 
-                    // 解析金额在索引4 (Amount列)
-                    double amount = Double.parseDouble(parts[4]);
-                    // 类别在索引5 (Category列)
-                    String category = parts[5].trim();
+                    // 解析金额
+                    double amount;
+                    try {
+                        amount = Double.parseDouble(parts[amountIdx]);
+                    } catch (NumberFormatException e) {
+                        // 尝试去除货币符号和逗号
+                        String cleanAmount = parts[amountIdx].replaceAll("[^\\d.-]", "");
+                        amount = Double.parseDouble(cleanAmount);
+                    }
+
+                    // 获取类别（如果存在）
+                    String category;
+                    if (categoryIdx != -1 && categoryIdx < parts.length) {
+                        category = parts[categoryIdx].trim();
+                        // 如果类别为空，使用"Uncategorized"
+                        if (category.isEmpty()) {
+                            category = "Uncategorized";
+                        }
+                    } else {
+                        category = "Uncategorized";
+                    }
 
                     System.out.println("发现交易: 日期=" + date + ", 类别=" + category + ", 金额=" + amount);
 
@@ -193,6 +277,7 @@ public class SpendingStructureChart extends BorderPane {
                     continue;
                 } catch (Exception e) {
                     System.out.println("处理第 " + lineCount + " 行出错: " + e.getMessage());
+                    e.printStackTrace();
                     continue;
                 }
             }
@@ -210,7 +295,7 @@ public class SpendingStructureChart extends BorderPane {
     /**
      * 根据选定的时间周期计算开始日期
      */
-    private LocalDate calculateStartDate(String period) {
+    private LocalDate calculateHistoricalStartDate(String period) {
         LocalDate now = LocalDate.now();
 
         switch (period) {
@@ -223,7 +308,25 @@ public class SpendingStructureChart extends BorderPane {
             case "This Year":
                 return LocalDate.of(now.getYear(), 1, 1);
             default:
-                return now.minusMonths(3); // 默认为最近3个月
+                return now.minusMonths(6); // 默认为最近6个月
+        }
+    }
+
+    /**
+     * 从周期字符串获取月数
+     */
+    private int getMonthsFromPeriod(String period) {
+        switch (period) {
+            case "Last Month":
+                return 1;
+            case "Last 3 Months":
+                return 3;
+            case "Last 6 Months":
+                return 6;
+            case "This Year":
+                return LocalDate.now().getMonthValue();
+            default:
+                return 6;
         }
     }
 
@@ -262,14 +365,22 @@ public class SpendingStructureChart extends BorderPane {
         chart.setMinSize(600, 400);
         chart.setClockwise(false);
 
+        // 存储原始类别名
+        Map<String, String> originalCategories = new HashMap<>();
+
         // 添加数据标签提示
         for (PieChart.Data data : chart.getData()) {
             String category = data.getName();
+            originalCategories.put(category, category); // 保存原始类别名
+
             double amount = data.getPieValue();
             double percentage = (amount / totalSpending) * 100;
 
-            // 创建详细提示信息
-            String tooltipText = String.format("%s: $%.2f (%.1f%%)", category, amount, percentage);
+            // 修改标签显示格式，包含类别名称和金额，使用人民币符号
+            data.setName(String.format("%s: ¥%.2f", category, amount));
+
+            // 创建详细提示信息，使用人民币符号
+            String tooltipText = String.format("%s: ¥%.2f (%.1f%%)", category, amount, percentage);
             Tooltip tooltip = new Tooltip(tooltipText);
             Tooltip.install(data.getNode(), tooltip);
 
@@ -285,61 +396,30 @@ public class SpendingStructureChart extends BorderPane {
             });
         }
 
-        // 创建图例面板
-        FlowPane legendPane = createLegendPane();
-
-        // 创建摘要标签
-        summaryLabel = new Label(String.format("Total Expenditure: $%.2f", totalSpending));
+        // 创建摘要标签，使用人民币符号
+        summaryLabel = new Label(String.format("Total Expenditure: ¥%.2f", totalSpending));
         summaryLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
 
+        // 使用内置图例，但恢复原始类别名
+        // 通过反射获取图例中的标签并修改它们的文本
+        try {
+            for (Node legendItem : chart.lookupAll(".chart-legend-item")) {
+                if (legendItem instanceof Label) {
+                    Label label = (Label) legendItem;
+                    String currentText = label.getText();
+                    if (currentText.contains(":")) {
+                        // 只保留冒号前的类别名
+                        String category = currentText.split(":")[0].trim();
+                        label.setText(category);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         // 设置布局
-        chartContainer.getChildren().addAll(chart, legendPane, summaryLabel);
-    }
-
-    /**
-     * 创建自定义图例面板
-     */
-    private FlowPane createLegendPane() {
-        FlowPane legendPane = new FlowPane();
-        legendPane.setHgap(10);
-        legendPane.setVgap(10);
-        legendPane.setAlignment(Pos.CENTER);
-        legendPane.setPadding(new Insets(10));
-
-        // 为每个类别创建图例项
-        for (PieChart.Data data : chart.getData()) {
-            HBox legendItem = new HBox(5);
-
-            // 创建颜色方块
-            Region colorBox = new Region();
-            colorBox.setMinSize(15, 15);
-            colorBox.setMaxSize(15, 15);
-            colorBox.setStyle("-fx-background-color: " + getColorFromNode(data.getNode()) + ";");
-
-            // 创建类别标签
-            Label categoryLabel = new Label(data.getName());
-            categoryLabel.setFont(Font.font("System", 14));
-
-            legendItem.getChildren().addAll(colorBox, categoryLabel);
-            legendPane.getChildren().add(legendItem);
-        }
-
-        return legendPane;
-    }
-
-    /**
-     * 从节点获取颜色字符串
-     */
-    private String getColorFromNode(javafx.scene.Node node) {
-        String style = node.getStyle();
-        if (style.contains("-fx-pie-color:")) {
-            int start = style.indexOf("-fx-pie-color:") + 14;
-            int end = style.indexOf(";", start);
-            if (end == -1)
-                end = style.length();
-            return style.substring(start, end).trim();
-        }
-        return "black";
+        chartContainer.getChildren().addAll(chart, summaryLabel);
     }
 
     /**
@@ -366,7 +446,21 @@ public class SpendingStructureChart extends BorderPane {
      * 刷新数据
      */
     private void refreshData() {
-        loadTransactionData();
-        setupChart();
+        // 创建后台任务
+        Task<Void> refreshTask = new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                loadTransactionData();
+                return null;
+            }
+        };
+
+        // 显示加载指示器并执行任务
+        LoadingUtils.showLoadingIndicator(rootPane, refreshTask, result -> {
+            // 清除现有图表容器内容
+            chartContainer.getChildren().clear();
+            // 重新创建图表
+            setupChart();
+        });
     }
 }
