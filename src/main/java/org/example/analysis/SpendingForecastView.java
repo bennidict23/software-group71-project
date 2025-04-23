@@ -270,19 +270,14 @@ public class SpendingForecastView extends BorderPane {
         // 决定是否使用AI预测
         boolean useAI = useAIPredictionCheckbox.isSelected();
 
-        if (useAI) {
-            // 将月度支出转换为格式适合AI模型的数据
-            Map<String, Double> historicalData = new LinkedHashMap<>();
-            for (Map.Entry<YearMonth, Double> entry : monthlySpending.entrySet()) {
-                historicalData.put(entry.getKey().toString(), entry.getValue());
-            }
-
-            // 使用AI服务生成预测
-            forecastSpending = AIModelService.getForecastSpending(historicalData, months);
-        } else {
-            // 使用简单的移动平均预测
-            generateSimpleForecast(months);
+        // 将月度支出转换为格式适合AI模型的数据
+        Map<String, Double> historicalData = new LinkedHashMap<>();
+        for (Map.Entry<YearMonth, Double> entry : monthlySpending.entrySet()) {
+            historicalData.put(entry.getKey().toString(), entry.getValue());
         }
+
+        // 使用AI服务生成预测
+        forecastSpending = AIModelService.getForecastSpending(historicalData, months);
     }
 
     /**
@@ -298,45 +293,6 @@ public class SpendingForecastView extends BorderPane {
                 return 12;
             default:
                 return 3;
-        }
-    }
-
-    /**
-     * 生成简单的移动平均预测
-     */
-    private void generateSimpleForecast(int months) {
-        forecastSpending = new LinkedHashMap<>();
-
-        // 获取历史月份和支出数据
-        List<YearMonth> historyMonths = new ArrayList<>(monthlySpending.keySet());
-        List<Double> historySpendings = new ArrayList<>(monthlySpending.values());
-
-        // 获取最近一个月
-        YearMonth lastMonth = historyMonths.get(historyMonths.size() - 1);
-
-        // 简单移动平均预测方法
-        double avg3Month = 0;
-        for (int i = Math.max(0, historySpendings.size() - 3); i < historySpendings.size(); i++) {
-            avg3Month += historySpendings.get(i);
-        }
-        avg3Month /= Math.min(3, historySpendings.size());
-
-        // 预测未来几个月
-        for (int i = 1; i <= months; i++) {
-            YearMonth futureMonth = lastMonth.plusMonths(i);
-
-            // 基础预测（移动平均）
-            double basicForecast = avg3Month;
-
-            // 添加季节性因素 - 例如春节(1-2月)和国庆(10月)支出可能增加
-            int monthValue = futureMonth.getMonthValue();
-            if (monthValue == 1 || monthValue == 2) {
-                basicForecast *= 1.2; // 春节期间增加20%
-            } else if (monthValue == 10) {
-                basicForecast *= 1.15; // 国庆期间增加15%
-            }
-
-            forecastSpending.put(futureMonth.toString(), basicForecast);
         }
     }
 
@@ -375,7 +331,7 @@ public class SpendingForecastView extends BorderPane {
         lineChart.setCreateSymbols(true);
         lineChart.setAnimated(true);
         lineChart.setLegendVisible(true);
-        lineChart.setPrefHeight(500);
+        lineChart.setPrefHeight(400); // 减小图表高度，给分析区域留更多空间
 
         // 历史数据系列
         XYChart.Series<Number, Number> historicalSeries = new XYChart.Series<>();
@@ -412,6 +368,29 @@ public class SpendingForecastView extends BorderPane {
 
         // 添加到容器
         contentContainer.getChildren().add(lineChart);
+
+        // 添加AI预测说明文本区域
+        String explanationText = AIModelService.getLatestForecastExplanation();
+        if (explanationText != null && !explanationText.isEmpty()) {
+            VBox explanationBox = new VBox(10);
+            explanationBox.setPadding(new Insets(20, 0, 0, 0));
+
+            Label explainTitle = new Label("AI Forecast Analysis:");
+            explainTitle.setFont(Font.font("System", FontWeight.BOLD, 16));
+
+            TextArea explainArea = new TextArea(explanationText);
+            explainArea.setEditable(false);
+            explainArea.setWrapText(true);
+            explainArea.setMaxWidth(Double.MAX_VALUE); // 使用最大宽度
+            explainArea.setPrefHeight(250); // 增加文本区域高度
+            explainArea.setStyle("-fx-background-color: #f8f8f8; -fx-border-color: #e0e0e0; -fx-font-size: 14px;");
+
+            explanationBox.getChildren().addAll(explainTitle, explainArea);
+            explanationBox.setMaxWidth(Double.MAX_VALUE); // 让解释区域框占满可用宽度
+            HBox.setHgrow(explanationBox, Priority.ALWAYS); // 允许水平增长
+
+            contentContainer.getChildren().add(explanationBox);
+        }
     }
 
     /**
