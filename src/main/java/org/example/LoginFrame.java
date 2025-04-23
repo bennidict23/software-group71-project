@@ -82,6 +82,7 @@ public class LoginFrame extends Application {
                 Stage mainStage = new Stage();
                 try {
                     mainApp.start(mainStage);
+                    loginStage.close();
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }

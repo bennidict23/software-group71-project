@@ -13,7 +13,9 @@ import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import org.example.list.TransactionViewer;
 
+
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -51,7 +53,7 @@ public class DashboardView extends Application {
 
     /**
      * 设置当前用户，静态方法，方便从外部设置当前登录用户。
-     * 
+     *
      * @param user 当前登录用户
      */
     public static void setCurrentUser(User user) {
@@ -60,7 +62,7 @@ public class DashboardView extends Application {
 
     /**
      * 获取当前用户，静态方法，方便在类的其他方法中获取当前登录用户。
-     * 
+     *
      * @return 当前登录用户
      */
     public static User getCurrentUser() {
@@ -69,7 +71,7 @@ public class DashboardView extends Application {
 
     /**
      * 启动仪表盘界面。
-     * 
+     *
      * @param primaryStage 主舞台
      * @throws Exception 异常
      */
@@ -93,6 +95,7 @@ public class DashboardView extends Application {
 
         // 检查本月消费情况，为后续的预算和目标展示提供数据支持
         userManager.checkMonthlyExpenses(currentUser);
+        List<String> warnings = currentUser.getWarnings();
 
         primaryStage.setTitle("User Dashboard");
 
@@ -192,10 +195,10 @@ public class DashboardView extends Application {
         HBox topBox = new HBox(20, personalInfoBox, budgetBox);
         topBox.setAlignment(Pos.TOP_CENTER);
         topBox.setPadding(new Insets(10));
-        // 创建 BarChart
+        // 创建 LineChart
         LineChart<String, Number> lineChart = new ConsumerTrendChart(currentUser).createChart();
 
-        // 创建 StackPane 并添加 BarChart
+        // 创建 StackPane 并添加 LineChart
         StackPane chartPane = new StackPane();
         chartPane.getChildren().add(lineChart);
         chartPane.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
@@ -228,6 +231,15 @@ public class DashboardView extends Application {
             }
         });
 
+        // 显示警告弹窗（如果存在警告）
+        Platform.runLater(() -> {
+            if (warnings != null && !warnings.isEmpty()) {
+                for (String warning : warnings) {
+                    showAlert(Alert.AlertType.WARNING, "Warning", warning);
+                }
+            }
+        });
+
         primaryStage.show();
 
         // 启动定时任务，每10秒更新一次 savedAmount 和 annualSavedAmount
@@ -257,7 +269,7 @@ public class DashboardView extends Application {
 
     /**
      * 显示密码修改对话框。
-     * 
+     *
      * @param owner 父级舞台
      */
     private void showChangePasswordDialog(Stage owner) {
@@ -314,7 +326,7 @@ public class DashboardView extends Application {
 
     /**
      * 显示目标设置对话框。
-     * 
+     *
      * @param owner 父级舞台
      */
     private void showGoalDialog(Stage owner) {
@@ -407,7 +419,6 @@ public class DashboardView extends Application {
                         + "% (" + currentUser.getSavedAmount() + " saved)");
                 showAlert(Alert.AlertType.INFORMATION, "Success", "Monthly target updated to: " + newMonthly);
                 userManager.saveUserSettings(currentUser);
-                dialog.close();
             } catch (NumberFormatException ex) {
                 showAlert(Alert.AlertType.ERROR, "Error", "Please enter a valid monthly target number.");
             }
@@ -416,7 +427,7 @@ public class DashboardView extends Application {
 
     /**
      * 显示预算设置对话框。
-     * 
+     *
      * @param owner 父级舞台
      */
     private void showBudgetDialog(Stage owner) {
@@ -595,7 +606,7 @@ public class DashboardView extends Application {
 
     /**
      * 显示提示对话框。
-     * 
+     *
      * @param type    对话框类型
      * @param title   对话框标题
      * @param message 对话框内容
@@ -610,7 +621,7 @@ public class DashboardView extends Application {
 
     /**
      * 用户登出逻辑。
-     * 
+     *
      * @param primaryStage 主舞台
      */
     private void logout(Stage primaryStage) {

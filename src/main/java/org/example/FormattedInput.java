@@ -359,30 +359,51 @@ public class FormattedInput extends Application {
 
             while ((line = reader.readLine()) != null) {
                 if (isFirstLine) {
-                    isFirstLine = false;
-                    continue; // Skip header
+                    isFirstLine = false;  // 跳过 header
+                    continue;
                 }
                 String[] rowData = parseCsvLine(line);
                 String[] record = new String[6];
-                record[0] = DashboardView.getCurrentUser().getUsername();
-                record[1] = "import";
-                record[2] = rowData.length > 0 ? rowData[0] : "";
-                record[3] = rowData.length > 1 ? rowData[1] : "";
-                record[4] = rowData.length > 2 ? rowData[2] : "Uncategorized";
-                record[5] = rowData.length > 3 ? rowData[3] : "";
+
+                if (rowData.length >= 7) {
+                    // 格式：Id,User,Source,Date,Amount,Category,Description
+                    record[0] = rowData[1].trim();  // User
+                    record[1] = rowData[2].trim();  // Source
+                    record[2] = rowData[3].trim();  // Date
+                    record[3] = rowData[4].trim();  // Amount
+                    record[4] = rowData[5].trim();  // Category
+                    record[5] = rowData[6].trim();  // Description
+                } else {
+                    // 老格式：Date,Amount,Category,Description
+                    record[0] = DashboardView.getCurrentUser().getUsername();
+                    record[1] = "import";
+                    record[2] = rowData.length > 0 ? rowData[0] : "";
+                    record[3] = rowData.length > 1 ? rowData[1] : "";
+                    record[4] = rowData.length > 2 ? rowData[2] : "Uncategorized";
+                    record[5] = rowData.length > 3 ? rowData[3] : "";
+                }
+
                 data.add(new ObservableStringArray(record));
             }
 
-            // **导入成功后，通知 Dashboard 可以显示折线图了**
+            // 导入完成后通知 Dashboard
             DashboardView.setImportDone(true);
 
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Import Successful");
             alert.setHeaderText(null);
-            alert.setContentText("Successfully imported regular CSV (encoding: " + encoding + ")");
+            alert.setContentText("Successfully imported " + data.size() + " records (encoding: " + encoding + ")");
             alert.showAndWait();
+
+//            // 关闭本窗口并重启 Dashboard
+//            Stage curr = (Stage) tableView.getScene().getWindow();
+//            curr.close();
+//            new DashboardView().start(new Stage());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
+
 
 
 

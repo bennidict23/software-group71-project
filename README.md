@@ -75,6 +75,7 @@ System.out.println("Amount: " + transaction.getAmount());
 // JavaFX property binding example
 label.textProperty().bind(transaction.userProperty());# TransactionController Class Documentation
 
+```
 ## Overview
 The `TransactionController` class acts as the controller in a MVC (Model-View-Controller) pattern for managing financial transactions. It handles data loading, searching, and interaction between the view and data model.
 
@@ -167,6 +168,7 @@ TransactionController controller = new TransactionController(view, loader);
 
 // The controller now handles all interactions between view and data# TransactionLoader Class Documentation
 
+```
 ## Overview
 The `TransactionLoader` class is responsible for loading transaction data from a CSV file and converting it into a list of `Transaction` objects.
 
@@ -284,6 +286,8 @@ BorderPane (root)
     ├── TableView (table)
     └── Button (loadButton) - "Update Data"# TransactionViewer Class Documentation
 
+```
+
 ## Overview
 The `TransactionViewer` class serves as the main entry point for the transaction viewing application. It extends JavaFX's `Application` class to create and launch the transaction management interface.
 
@@ -310,6 +314,7 @@ Public static method to launch the application.
 ```java
 TransactionViewer.showTransactionView();# ConsumerTrendChart Class Documentation
 
+```
 ## Overview
 The `ConsumerTrendChart` class generates a bar chart visualization of a user's daily spending trends over the past 7 days (including today). It filters and processes transaction data specific to the current user.
 
@@ -490,6 +495,8 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 // Additional dependencies...# RegisterFrame Class Documentation
 
+```
+
 ## Overview
 The `RegisterFrame` class provides a user registration interface built with JavaFX, implementing user account creation with validation logic.
 
@@ -522,6 +529,7 @@ import javafx.stage.Stage;classDiagram
         +resetAnnualSettings()
         // getters/setters...
     }# UserManager Class Documentation
+```
 
 ## Overview
 The `UserManager` class provides centralized user management functionality including authentication, registration, and financial tracking. It implements persistent storage using CSV files and includes automated transaction monitoring.
