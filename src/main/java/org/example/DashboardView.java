@@ -14,6 +14,8 @@ import javafx.stage.Stage;
 import org.example.list.TransactionViewer;
 
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -47,7 +49,8 @@ public class DashboardView extends Application {
 
     // 格式化输入页面对象，用于处理格式化输入相关操作
     private FormattedInput formattedInput = null;
-
+    // 用于显示消费趋势的折线图
+    private LineChart<String, Number> lineChart;
     // 定时任务，用于定期更新 savedAmount 和 annualSavedAmount
     private ScheduledExecutorService scheduler;
 
@@ -196,12 +199,23 @@ public class DashboardView extends Application {
         topBox.setAlignment(Pos.TOP_CENTER);
         topBox.setPadding(new Insets(10));
         // 创建 LineChart
-        LineChart<String, Number> lineChart = new ConsumerTrendChart(currentUser).createChart();
+        lineChart = new ConsumerTrendChart(currentUser).createChart();
 
         // 创建 StackPane 并添加 LineChart
         StackPane chartPane = new StackPane();
         chartPane.getChildren().add(lineChart);
         chartPane.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+
+        // 检查是否有交易记录，如果有则显示图表
+        try (BufferedReader br = new BufferedReader(new FileReader("transactions.csv"))) {
+            // 跳过表头
+            String line = br.readLine();
+            if ((line = br.readLine()) != null) {
+                importDone = true;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         chartPane.setVisible(importDone);
         chartPane.managedProperty().bind(chartPane.visibleProperty());
@@ -242,9 +256,26 @@ public class DashboardView extends Application {
 
         primaryStage.show();
 
-        // 启动定时任务，每10秒更新一次 savedAmount 和 annualSavedAmount
+        // 启动定时任务，每5秒更新一次 savedAmount 和 annualSavedAmount
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleAtFixedRate(this::updateSavedAmounts, 0, 10, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(this::updateSavedAmounts, 0, 5, TimeUnit.SECONDS);
+        // 启动定时任务，每5秒更新一次图表
+        scheduler.scheduleAtFixedRate(this::updateChart, 0, 5, TimeUnit.SECONDS);
+    }
+
+    private void updateChart() {
+        // 调用 UserManager 的 checkTransactionsFile 方法检测文件变化
+        userManager.checkTransactionsFile();
+
+        // 更新图表数据
+        Platform.runLater(() -> {
+            // 清空旧数据
+            lineChart.getData().clear();
+
+            // 重新计算并添加新数据
+            LineChart<String, Number> newChart = new ConsumerTrendChart(currentUser).createChart();
+            lineChart.getData().addAll(newChart.getData());
+        });
     }
 
     /**
@@ -625,6 +656,10 @@ public class DashboardView extends Application {
      * @param primaryStage 主舞台
      */
     private void logout(Stage primaryStage) {
+        // 停止定时任务
+        if (scheduler != null) {
+            scheduler.shutdownNow();
+        }
         DashboardView.currentUser = null;
         primaryStage.close();
         LoginFrame loginFrame = new LoginFrame();
