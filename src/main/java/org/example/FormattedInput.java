@@ -48,7 +48,6 @@ public class FormattedInput extends Application {
             }
         }
 
-
         public void set(int index, String value) {
             properties.get(index).set(value);
         }
@@ -95,7 +94,6 @@ public class FormattedInput extends Application {
         primaryStage.show();
     }
 
-
     private HBox gethBox(Stage primaryStage) {
         Button importButton = new Button("Import CSV File");
         importButton.setOnAction(e -> importCSV(primaryStage));
@@ -128,12 +126,11 @@ public class FormattedInput extends Application {
                 templateButton,
                 saveButton,
                 deleteButton,
-                btnBack    // <- 这里
+                btnBack // <- 这里
         );
         buttonBox.setPadding(new Insets(10));
         return buttonBox;
     }
-
 
     private VBox createAddRecordForm() {
         VBox formBox = new VBox(10);
@@ -186,7 +183,7 @@ public class FormattedInput extends Application {
         table.setEditable(true);
 
         // 新增 User 列，Source 列，以及后续列
-        String[] headers = {"User", "Source", "Date", "Amount", "Category", "Description"};
+        String[] headers = { "User", "Source", "Date", "Amount", "Category", "Description" };
         for (int i = 0; i < headers.length; i++) {
             final int columnIndex = i;
             TableColumn<ObservableStringArray, String> column = new TableColumn<>(headers[i]);
@@ -206,7 +203,6 @@ public class FormattedInput extends Application {
         table.setItems(data);
         return table;
     }
-
 
     private void addRecord() {
         try {
@@ -266,15 +262,14 @@ public class FormattedInput extends Application {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Select CSV File to Import");
         fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("CSV Files", "*.csv")
-        );
+                new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
 
         File file = fileChooser.showOpenDialog(stage);
         if (file != null) {
             lastSelectedFile = file;
 
             // 微信常见编码优先级更高
-            String[] encodings = {"UTF-8", "GBK", "GB18030", "GB2312", "ISO-8859-1"};
+            String[] encodings = { "UTF-8", "GBK", "GB18030", "GB2312", "ISO-8859-1" };
             boolean fileProcessed = false;
             IOException lastError = null;
 
@@ -355,38 +350,101 @@ public class FormattedInput extends Application {
                 new InputStreamReader(new FileInputStream(file), encoding))) {
             data.clear();
             String line;
-            boolean isFirstLine = true;
 
+            // 读取表头行
+            line = reader.readLine();
+            if (line == null) {
+                throw new IOException("CSV file is empty");
+            }
+
+            // 解析表头，确定每个字段的索引
+            String[] headers = parseCsvLine(line);
+
+            // 确定各列的索引位置（默认为-1表示未找到）
+            int idIdx = -1;
+            int userIdx = -1;
+            int sourceIdx = -1;
+            int dateIdx = -1;
+            int amountIdx = -1;
+            int categoryIdx = -1;
+            int descriptionIdx = -1;
+
+            // 查找各列的索引位置
+            for (int i = 0; i < headers.length; i++) {
+                String header = headers[i].trim().toLowerCase();
+                if (header.equals("id")) {
+                    idIdx = i;
+                } else if (header.equals("user") || header.contains("user")) {
+                    userIdx = i;
+                } else if (header.equals("source")) {
+                    sourceIdx = i;
+                } else if (header.equals("date")) {
+                    dateIdx = i;
+                } else if (header.equals("amount")) {
+                    amountIdx = i;
+                } else if (header.equals("category")) {
+                    categoryIdx = i;
+                } else if (header.equals("description")) {
+                    descriptionIdx = i;
+                }
+            }
+
+            // 验证必要的列存在
+            if (dateIdx == -1 || amountIdx == -1) {
+                throw new IOException("CSV file must contain at least Date and Amount columns");
+            }
+
+            System.out.println("CSV头部分析结果：");
+            System.out.println("ID列索引: " + idIdx);
+            System.out.println("User列索引: " + userIdx);
+            System.out.println("Source列索引: " + sourceIdx);
+            System.out.println("Date列索引: " + dateIdx);
+            System.out.println("Amount列索引: " + amountIdx);
+            System.out.println("Category列索引: " + categoryIdx);
+            System.out.println("Description列索引: " + descriptionIdx);
+
+            // 处理数据行
+            int lineCount = 1; // 已经读取了表头
             while ((line = reader.readLine()) != null) {
-                if (isFirstLine) {
-                    isFirstLine = false;  // 跳过 header
+                lineCount++;
+                String[] rowData = parseCsvLine(line);
+
+                // 跳过空行或格式不正确的行
+                if (rowData.length <= Math.max(dateIdx, amountIdx)) {
+                    System.out.println("警告：第" + lineCount + "行数据列数不足，已跳过");
                     continue;
                 }
-                String[] rowData = parseCsvLine(line);
+
                 String[] record = new String[6];
 
-                if (rowData.length >= 7) {
-                    // 格式：Id,User,Source,Date,Amount,Category,Description
-                    record[0] = rowData[1].trim();  // User
-                    record[1] = rowData[2].trim();  // Source
-                    record[2] = rowData[3].trim();  // Date
-                    record[3] = rowData[4].trim();  // Amount
-                    record[4] = rowData[5].trim();  // Category
-                    record[5] = rowData[6].trim();  // Description
-                } else {
-                    // 老格式：Date,Amount,Category,Description
-                    record[0] = DashboardView.getCurrentUser().getUsername();
-                    record[1] = "import";
-                    record[2] = rowData.length > 0 ? rowData[0] : "";
-                    record[3] = rowData.length > 1 ? rowData[1] : "";
-                    record[4] = rowData.length > 2 ? rowData[2] : "Uncategorized";
-                    record[5] = rowData.length > 3 ? rowData[3] : "";
-                }
+                // User列: 优先使用文件中的值，如果没有则使用当前用户名
+                record[0] = (userIdx >= 0 && userIdx < rowData.length && !rowData[userIdx].isEmpty())
+                        ? rowData[userIdx]
+                        : DashboardView.getCurrentUser().getUsername();
+
+                // Source列: 优先使用文件中的值，如果没有则使用"import"
+                record[1] = (sourceIdx >= 0 && sourceIdx < rowData.length && !rowData[sourceIdx].isEmpty())
+                        ? rowData[sourceIdx]
+                        : "import";
+
+                // Date列
+                record[2] = (dateIdx >= 0 && dateIdx < rowData.length) ? rowData[dateIdx] : "";
+
+                // Amount列
+                record[3] = (amountIdx >= 0 && amountIdx < rowData.length) ? rowData[amountIdx] : "";
+
+                // Category列
+                record[4] = (categoryIdx >= 0 && categoryIdx < rowData.length && !rowData[categoryIdx].isEmpty())
+                        ? rowData[categoryIdx]
+                        : "Uncategorized";
+
+                // Description列
+                record[5] = (descriptionIdx >= 0 && descriptionIdx < rowData.length) ? rowData[descriptionIdx] : "";
 
                 data.add(new ObservableStringArray(record));
             }
 
-            // 导入完成后通知 Dashboard
+            // 导入成功后，通知Dashboard可以显示折线图了
             DashboardView.setImportDone(true);
 
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -394,21 +452,12 @@ public class FormattedInput extends Application {
             alert.setHeaderText(null);
             alert.setContentText("Successfully imported " + data.size() + " records (encoding: " + encoding + ")");
             alert.showAndWait();
-
-//            // 关闭本窗口并重启 Dashboard
-//            Stage curr = (Stage) tableView.getScene().getWindow();
-//            curr.close();
-//            new DashboardView().start(new Stage());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
     }
 
-
-
-
     private void importWechatWithEncoding(String encoding) {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(lastSelectedFile), encoding))) {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(new FileInputStream(lastSelectedFile), encoding))) {
             data.clear();
             String line;
             int lineCount = 0;
@@ -434,12 +483,12 @@ public class FormattedInput extends Application {
                     String rawAmount = rowData[5];
                     String processedAmount = processAmount(rawAmount);
 
-                    fullRowData[0] = "Default User";        // User (hardcoded)
-                    fullRowData[1] = "wechat";             // Source
-                    fullRowData[2] = processedDate;        // Date (column 1, processed)
-                    fullRowData[3] = processedAmount;       // Amount (column 6, processed)
-                    fullRowData[4] = "Uncategorized";      // Category (hardcoded)
-                    fullRowData[5] = rowData[1]+rowData[2];          // Description (columns 2+3 combined)
+                    fullRowData[0] = "Default User"; // User (hardcoded)
+                    fullRowData[1] = "wechat"; // Source
+                    fullRowData[2] = processedDate; // Date (column 1, processed)
+                    fullRowData[3] = processedAmount; // Amount (column 6, processed)
+                    fullRowData[4] = "Uncategorized"; // Category (hardcoded)
+                    fullRowData[5] = rowData[1] + rowData[2]; // Description (columns 2+3 combined)
 
                     data.add(new ObservableStringArray(fullRowData));
                 }
@@ -448,11 +497,13 @@ public class FormattedInput extends Application {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Import Successful");
             alert.setHeaderText(null);
-            alert.setContentText("Successfully imported " + data.size() + " records from WeChat (encoding: " + encoding + ")");
+            alert.setContentText(
+                    "Successfully imported " + data.size() + " records from WeChat (encoding: " + encoding + ")");
             alert.showAndWait();
 
         } catch (IOException e) {
-            showErrorAlert("Import Error", "Failed to import WeChat CSV with encoding " + encoding + ": " + e.getMessage());
+            showErrorAlert("Import Error",
+                    "Failed to import WeChat CSV with encoding " + encoding + ": " + e.getMessage());
         }
     }
 
@@ -475,7 +526,7 @@ public class FormattedInput extends Application {
                     String rawDate = rowData[0];
                     String processedDate = processDate(rawDate);
 
-                    fullRowData[0] = DashboardView.getCurrentUser().getUsername();  // 真实用户名
+                    fullRowData[0] = DashboardView.getCurrentUser().getUsername(); // 真实用户名
                     fullRowData[1] = "alipay";
                     fullRowData[2] = processedDate;
                     fullRowData[3] = rowData[6];
@@ -501,7 +552,6 @@ public class FormattedInput extends Application {
                     "Failed to import Alipay CSV with encoding " + encoding + ": " + e.getMessage());
         }
     }
-
 
     private boolean isEmptyRow(String[] rowData) {
         for (String cell : rowData) {
@@ -533,8 +583,7 @@ public class FormattedInput extends Application {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Save CSV Template");
         fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("CSV Files", "*.csv")
-        );
+                new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
         fileChooser.setInitialFileName("transactions.csv");
 
         File file = fileChooser.showSaveDialog(stage);
@@ -563,7 +612,6 @@ public class FormattedInput extends Application {
             }
         }
     }
-
 
     private String[] parseCsvLine(String line) {
         List<String> tokens = new ArrayList<>();
