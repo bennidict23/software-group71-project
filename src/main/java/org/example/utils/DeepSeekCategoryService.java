@@ -96,7 +96,14 @@ public class DeepSeekCategoryService {
      * @throws IOException 如果API请求失败
      */
     private String classifyTransaction(String description, String amount) throws IOException {
-        // 模拟API调用（演示用）
+        // 首先尝试使用用户定义的规则进行分类
+        String category = CategoryRulesManager.findMatchingCategory(description);
+        if (category != null) {
+            System.out.println("使用自定义规则将描述 \"" + description + "\" 分类为: " + category);
+            return category;
+        }
+
+        // 如果没有匹配的规则，使用模拟API调用（演示用）
         // 在实际项目中，这里应当替换为真正的API调用代码
         if (System.getenv("DEEPSEEK_API_KEY") == null || System.getenv("DEEPSEEK_API_KEY").isEmpty()) {
             // 使用硬编码的API密钥，而不是环境变量
@@ -112,15 +119,26 @@ public class DeepSeekCategoryService {
         connection.setRequestProperty("Authorization", "Bearer " + API_KEY);
         connection.setDoOutput(true);
 
-        // 创建请求体
+        // 获取用户定义的分类规则提示
+        String userRulesPrompt = CategoryRulesManager.generateClassificationPrompt();
+
+        // 创建请求体，包含用户定义的规则
+        String systemPrompt = "You are a financial transaction classifier. " +
+                "Classify the transaction into exactly one of these categories: " +
+                String.join(", ", PREDEFINED_CATEGORIES) + ". " +
+                "Only respond with the category name, nothing else.";
+
+        // 如果有用户定义的规则，添加到系统提示中
+        if (!userRulesPrompt.isEmpty()) {
+            systemPrompt = systemPrompt + "\n\n" + userRulesPrompt;
+        }
+
+        // 完整的请求体
         String requestBody = String.format(
-                "{\"model\":\"deepseek-chat\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a financial transaction classifier. "
-                        +
-                        "Classify the transaction into exactly one of these categories: %s. " +
-                        "Only respond with the category name, nothing else.\"},{\"role\":\"user\",\"content\":\"Transaction description: %s, Amount: %s\"}]}",
-                String.join(", ", PREDEFINED_CATEGORIES),
-                description,
-                amount);
+                "{\"model\":\"deepseek-chat\",\"messages\":[{\"role\":\"system\",\"content\":\"%s\"},{\"role\":\"user\",\"content\":\"Transaction description: %s, Amount: %s\"}]}",
+                systemPrompt.replace("\"", "\\\""),
+                description.replace("\"", "\\\""),
+                amount.replace("\"", "\\\""));
 
         // 发送请求
         try (OutputStream os = connection.getOutputStream()) {
@@ -146,11 +164,11 @@ public class DeepSeekCategoryService {
         // 这是一个简化处理，实际中应使用JSON解析库
         int contentStart = result.indexOf("\"content\":\"") + 11;
         int contentEnd = result.indexOf("\"", contentStart);
-        String category = result.substring(contentStart, contentEnd);
+        String responseCategory = result.substring(contentStart, contentEnd);
 
         // 验证结果是否在我们的类别中
-        if (PREDEFINED_CATEGORIES.contains(category)) {
-            return category;
+        if (PREDEFINED_CATEGORIES.contains(responseCategory)) {
+            return responseCategory;
         } else {
             return "Other";
         }
