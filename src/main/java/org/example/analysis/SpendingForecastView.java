@@ -395,11 +395,38 @@ public class SpendingForecastView extends BorderPane {
         }
 
         // 填充预测数据
+        YearMonth lastHistoricalMonth = null;
+        if (!monthlySpending.isEmpty()) {
+            lastHistoricalMonth = monthlySpending.keySet().stream().reduce((first, second) -> second).orElse(null);
+        }
+
+        if (lastHistoricalMonth == null) {
+            lastHistoricalMonth = YearMonth.now();
+        }
+
+        int i = 0;
         for (Map.Entry<String, Double> entry : forecastSpending.entrySet()) {
             forecastSeries.getData().add(new XYChart.Data<>(index, entry.getValue()));
-            monthLabels.put(index, entry.getKey());
+
+            // 计算正确的年月
+            YearMonth forecastMonth = lastHistoricalMonth.plusMonths(i + 1);
+            monthLabels.put(index, forecastMonth.getMonth().toString() + " " + forecastMonth.getYear());
+
             index++;
+            i++;
         }
+
+        // 自定义X轴标签
+        xAxis.setTickLabelFormatter(new NumberAxis.DefaultFormatter(xAxis) {
+            @Override
+            public String toString(Number object) {
+                int index = object.intValue();
+                if (monthLabels.containsKey(index)) {
+                    return monthLabels.get(index);
+                }
+                return "";
+            }
+        });
 
         // 添加数据系列到图表
         lineChart.getData().addAll(historicalSeries, forecastSeries);
