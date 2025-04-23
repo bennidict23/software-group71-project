@@ -410,24 +410,8 @@ public class SpendingForecastView extends BorderPane {
             data.getNode().setStyle("-fx-stroke: orange; -fx-stroke-width: 2px;");
         }
 
-        // 添加说明标签
-        HBox legendBox = new HBox(20);
-        legendBox.setAlignment(Pos.CENTER);
-
-        Region historicalColor = new Region();
-        historicalColor.setStyle("-fx-background-color: #4682b4; -fx-min-width: 15px; -fx-min-height: 15px;");
-        Label historicalLabel = new Label("Historical Spending");
-
-        Region forecastColor = new Region();
-        forecastColor.setStyle("-fx-background-color: orange; -fx-min-width: 15px; -fx-min-height: 15px;");
-        Label forecastLabel = new Label("AI Forecasted Spending");
-
-        legendBox.getChildren().addAll(
-                historicalColor, historicalLabel,
-                forecastColor, forecastLabel);
-
         // 添加到容器
-        contentContainer.getChildren().addAll(lineChart, legendBox);
+        contentContainer.getChildren().add(lineChart);
     }
 
     /**
