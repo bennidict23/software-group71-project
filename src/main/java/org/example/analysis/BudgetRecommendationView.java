@@ -254,50 +254,54 @@ public class BudgetRecommendationView extends BorderPane {
      */
     private void generateRecommendations() {
         if (monthlyAverages.isEmpty()) {
+            recommendedBudgets = new HashMap<>();
             return;
         }
 
         boolean applySeasonalAdjustments = seasonalAdjustmentCheckbox.isSelected();
 
         // 使用AI服务生成预算建议
-        recommendedBudgets = AIModelService.getBudgetRecommendations(
-                monthlyAverages, applySeasonalAdjustments);
+        recommendedBudgets = AIModelService.getBudgetRecommendations(monthlyAverages, applySeasonalAdjustments);
 
         // 计算总预算
         totalBudget = 0.0;
         for (Double amount : recommendedBudgets.values()) {
             totalBudget += amount;
         }
+
+        // 更新总预算显示
+        updateTotalBudgetLabel();
     }
 
     /**
      * 显示预算建议
      */
     private void displayRecommendations() {
-        // 清空内容容器
-        contentContainer.getChildren().clear();
-
-        // 如果没有数据，显示提示信息
         if (monthlyAverages.isEmpty()) {
             showNoDataMessage();
             return;
         }
 
-        // 创建预算表格
+        // 更新预算表格
         createBudgetTable();
 
-        // 更新总预算标签
-        totalBudgetLabel.setText(String.format("Total Recommended Budget: ¥%.2f", totalBudget));
+        // 添加预算分析文本
+        addBudgetAnalysisText();
     }
 
     /**
      * 创建预算表格
      */
     private void createBudgetTable() {
+        // 清空内容容器
+        contentContainer.getChildren().clear();
+
         // 创建表格
         budgetTable = new TableView<>();
         budgetTable.setEditable(false);
-        budgetTable.setMinHeight(400);
+        budgetTable.setMinHeight(250); // 进一步减小表格的最小高度
+        budgetTable.setPrefHeight(250); // 设置首选高度
+        budgetTable.setMaxHeight(250); // 限制最大高度
 
         // 创建列
         TableColumn<BudgetItem, String> categoryColumn = new TableColumn<>("Category");
@@ -337,7 +341,53 @@ public class BudgetRecommendationView extends BorderPane {
         budgetTable.getItems().addAll(items);
 
         // 添加表格到容器
-        contentContainer.getChildren().add(budgetTable);
+        Label tableTitle = new Label("Recommended Budget Allocation");
+        tableTitle.setFont(Font.font("System", FontWeight.BOLD, 16));
+
+        VBox tableBox = new VBox(10, tableTitle, budgetTable);
+        tableBox.setPadding(new Insets(0, 0, 10, 0));
+        contentContainer.getChildren().add(tableBox);
+    }
+
+    /**
+     * 添加预算分析文本
+     */
+    private void addBudgetAnalysisText() {
+        // 从AIModelService获取分析文本
+        String analysisText = AIModelService.getLatestBudgetRecommendationAnalysis();
+
+        if (analysisText != null && !analysisText.isEmpty()) {
+            VBox analysisBox = new VBox(10);
+            analysisBox.setPadding(new Insets(10, 0, 0, 0));
+            analysisBox.setStyle(
+                    "-fx-background-color: #f5f9ff; -fx-border-color: #b8d0e8; -fx-border-radius: 5px; -fx-padding: 15px;");
+
+            Label analysisTitle = new Label("Budget Analysis and Recommendations:");
+            analysisTitle.setFont(Font.font("System", FontWeight.BOLD, 18));
+            analysisTitle.setStyle("-fx-text-fill: #2c5777;");
+
+            TextArea analysisArea = new TextArea(analysisText);
+            analysisArea.setEditable(false);
+            analysisArea.setWrapText(true);
+            analysisArea.setMaxWidth(Double.MAX_VALUE);
+            analysisArea.setPrefHeight(400); // 增加文本区域高度
+            analysisArea.setMinHeight(350); // 设置最小高度
+            analysisArea.setStyle(
+                    "-fx-background-color: #f8f8f8; -fx-border-color: #e0e0e0; -fx-font-size: 14px; -fx-control-inner-background: #ffffff;");
+
+            // 设置文本区域可以自由滚动
+            ScrollPane scrollPane = new ScrollPane(analysisArea);
+            scrollPane.setFitToWidth(true);
+            scrollPane.setMinHeight(350);
+            scrollPane.setPrefHeight(400);
+            scrollPane.setStyle("-fx-background-color: transparent; -fx-border-color: transparent;");
+
+            analysisBox.getChildren().addAll(analysisTitle, scrollPane);
+            analysisBox.setMaxWidth(Double.MAX_VALUE);
+            HBox.setHgrow(analysisBox, Priority.ALWAYS);
+
+            contentContainer.getChildren().add(analysisBox);
+        }
     }
 
     /**
@@ -410,38 +460,46 @@ public class BudgetRecommendationView extends BorderPane {
      * 创建控制面板
      */
     private HBox createControlPanel() {
-        // 创建基于历史数据周期的选择器
-        Label basedOnLabel = new Label("Based on spending from:");
-        basedOnLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
+        HBox controlBox = new HBox(15);
+        controlBox.setAlignment(Pos.CENTER_LEFT);
+        controlBox.setPadding(new Insets(10));
 
+        // 创建历史数据周期选择器
+        Label periodLabel = new Label("Analysis Period:");
+        periodLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
+
+        // 初始化周期选择器
         periodSelector = new ComboBox<>();
         periodSelector.getItems().addAll("Last Month", "Last 3 Months", "Last 6 Months", "This Year");
-        periodSelector.setValue("Last 6 Months");
+        periodSelector.setValue("Last 3 Months");
         periodSelector.setMinWidth(150);
         periodSelector.setOnAction(e -> refreshData());
 
-        // 季节性调整复选框
+        // 创建季节性调整选项
         seasonalAdjustmentCheckbox = new CheckBox("Apply Seasonal Adjustments");
         seasonalAdjustmentCheckbox.setSelected(true);
         seasonalAdjustmentCheckbox.setOnAction(e -> refreshData());
 
         // 刷新按钮
-        Button refreshButton = new Button("Refresh");
+        Button refreshButton = new Button("Refresh Data");
         refreshButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
         refreshButton.setOnAction(e -> refreshData());
 
-        // 应用推荐预算按钮
-        Button applyBudgetButton = new Button("Apply Recommended Budget");
-        applyBudgetButton.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white;");
-        applyBudgetButton.setOnAction(e -> applyRecommendedBudgets());
+        // 应用建议按钮
+        Button applyButton = new Button("Apply Recommendations");
+        applyButton.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white;");
+        applyButton.setOnAction(e -> applyRecommendedBudgets());
 
-        // 创建控制面板容器
-        HBox controlPanel = new HBox(15);
-        controlPanel.setAlignment(Pos.CENTER_LEFT);
-        controlPanel.getChildren().addAll(basedOnLabel, periodSelector, seasonalAdjustmentCheckbox, refreshButton,
-                applyBudgetButton);
+        controlBox.getChildren().addAll(periodLabel, periodSelector, seasonalAdjustmentCheckbox, refreshButton,
+                applyButton);
+        return controlBox;
+    }
 
-        return controlPanel;
+    /**
+     * 更新总预算标签
+     */
+    private void updateTotalBudgetLabel() {
+        totalBudgetLabel.setText(String.format("Total Recommended Budget: ¥%.2f", totalBudget));
     }
 
     /**

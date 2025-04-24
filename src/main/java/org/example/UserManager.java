@@ -19,6 +19,7 @@ public class UserManager {
     private static final String TRANSACTION_FILE = "transactions.csv";
 
     private ScheduledExecutorService scheduler;
+    private boolean isLoggedIn = false; // 标志变量，表示是否有用户登录
 
     public UserManager() {
         // 如果文件不存在，则创建并添加表头
@@ -42,15 +43,15 @@ public class UserManager {
         file = new File(TRANSACTION_FILE);
         if (!file.exists()) {
             try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
-                writer.println("Id,User,Source,Date,Amount,Category,Description");
+                writer.println("User,Source,Date,Amount,Category,Description");
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-        // 启动定时任务，每十秒检查一次 transactions.csv 文件的变化
+        // 启动定时任务，每5秒检查一次 transactions.csv 文件的变化
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleAtFixedRate(this::checkTransactionsFile, 0, 10, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(this::checkTransactionsFile, 0, 5, TimeUnit.SECONDS);
     }
 
     // 注册用户的方法
@@ -72,7 +73,7 @@ public class UserManager {
     public User getUser(String username) {
         try (BufferedReader br = new BufferedReader(new FileReader(USERS_FILE))) {
             String line;
-            // 跳过标题行
+            // 跨过标题行
             br.readLine();
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
@@ -142,9 +143,15 @@ public class UserManager {
     public boolean authenticate(String username, String password) {
         User user = getUser(username);
         if (user != null) {
+            isLoggedIn = true; // 用户登录成功，设置标志变量
             return user.getPassword().equals(password);
         }
         return false;
+    }
+
+    // 用户登出
+    public void logout() {
+        isLoggedIn = false; // 用户登出，清除标志变量
     }
 
     // 重置用户密码
@@ -274,6 +281,10 @@ public class UserManager {
 
     // 检查 transactions.csv 文件的变化并更新 savedAmount 和 annualSavedAmount
     public void checkTransactionsFile() {
+        if (!isLoggedIn) { // 如果没有用户登录，直接返回
+            return;
+        }
+
         File file = new File(TRANSACTION_FILE);
         if (!file.exists()) {
             return;
@@ -335,9 +346,9 @@ public class UserManager {
 
         for (String line : newTransactions) {
             String[] parts = line.split(",");
-            if (parts.length >= 7 && parts[1].equals(currentUser.getUsername())) {
-                double amount = Double.parseDouble(parts[4]);
-                String dateStr = parts[3];
+            if (parts.length >= 6 && parts[0].equals(currentUser.getUsername())) {
+                double amount = Double.parseDouble(parts[3]);
+                String dateStr = parts[2];
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 LocalDate date = LocalDate.parse(dateStr, formatter);
 
@@ -353,9 +364,9 @@ public class UserManager {
 
         for (String line : removedTransactions) {
             String[] parts = line.split(",");
-            if (parts.length >= 7 && parts[1].equals(currentUser.getUsername())) {
-                double amount = Double.parseDouble(parts[4]);
-                String dateStr = parts[3];
+            if (parts.length >= 6 && parts[0].equals(currentUser.getUsername())) {
+                double amount = Double.parseDouble(parts[3]);
+                String dateStr = parts[2];
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 LocalDate date = LocalDate.parse(dateStr, formatter);
 
@@ -406,8 +417,6 @@ public class UserManager {
         }
     }
 
-
-
     public void checkMonthlyExpenses(User user) {
         String username = user.getUsername();
         double shoppingSpent = 0.0;
@@ -423,10 +432,10 @@ public class UserManager {
             br.readLine(); // 跳过标题行
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
-                if (parts.length >= 7 && parts[1].equals(username)) {
-                    String dateStr = parts[3];
-                    double amount = Double.parseDouble(parts[4]);
-                    String category = parts[5];
+                if (parts.length >= 6 && parts[0].equals(username)) {
+                    String dateStr = parts[2];
+                    double amount = Double.parseDouble(parts[3]);
+                    String category = parts[4];
 
                     // 解析日期
                     DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -479,14 +488,6 @@ public class UserManager {
     }
 
 
-
-    private void showAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
 
     // 关闭定时任务
     public void shutdownScheduler() {
