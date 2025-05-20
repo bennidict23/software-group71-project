@@ -44,7 +44,7 @@ public class ConsumerTrendChart {
         for (Map.Entry<YearMonth, Double> e : monthly.entrySet()) {
             series.getData().add(new XYChart.Data<>(
                     e.getKey().format(fmt),
-                    e.getValue()
+                    -e.getValue()
             ));
         }
 
