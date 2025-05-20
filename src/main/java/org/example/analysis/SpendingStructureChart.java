@@ -45,7 +45,7 @@ public class SpendingStructureChart extends BorderPane {
 
     /**
      * 构造函数
-     * 
+     *
      * @param currentUser 当前用户
      */
     public SpendingStructureChart(User currentUser) {
@@ -145,7 +145,7 @@ public class SpendingStructureChart extends BorderPane {
     /**
      * 从transactions.csv加载交易数据
      */
-    private void loadTransactionData() {
+    public void loadTransactionData() {
         System.out.println("开始加载交易数据...");
 
         // 清空之前的数据
@@ -445,7 +445,7 @@ public class SpendingStructureChart extends BorderPane {
     /**
      * 刷新数据
      */
-    private void refreshData() {
+    public void refreshData() {
         // 创建后台任务
         Task<Void> refreshTask = new Task<Void>() {
             @Override
@@ -462,5 +462,13 @@ public class SpendingStructureChart extends BorderPane {
             // 重新创建图表
             setupChart();
         });
+    }
+
+    public Map<String, Double> getCategoryTotals() {
+        return categoryTotals;
+    }
+
+    public double getTotalSpending() {
+        return totalSpending;
     }
 }

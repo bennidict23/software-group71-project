@@ -2,19 +2,24 @@ package org.example;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.chart.LineChart;
+import javafx.scene.chart.PieChart;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
+import org.example.analysis.SpendingStructureChart;
 import org.example.list.TransactionViewer;
 import org.example.analysis.AnalysisView;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -158,31 +163,51 @@ public class DashboardView extends Application {
         // 创建导航栏布局，包含页面选择下拉框
         HBox navigationBox = new HBox(pageSelector);
         navigationBox.setAlignment(Pos.TOP_CENTER);
-        navigationBox.setPadding(new Insets(10));
+        // 减少导航栏内边距
+        navigationBox.setPadding(new Insets(5));
 
         // 创建标题标签
         Label titleLabel = new Label("Dashboard");
         titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
 
-        // 创建个人信息区域，展示账户信息，并提供登出功能
+        // 创建新的框
+        VBox newBox = new VBox();
+        newBox.setAlignment(Pos.CENTER);
+        newBox.setPadding(new Insets(10));
+        newBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+        // 增大高度
+        newBox.setPrefHeight(250);
+        HBox.setHgrow(newBox, Priority.ALWAYS);
+
+        // 创建储蓄金额和剩余预算标签
         Label savedAmountLabel = new Label("Saved Amount: $" + (currentUser != null ? currentUser.getSavedAmount() : "N/A"));
         Label remainingBudgetLabel = new Label("Remaining Budget: $" + (currentUser != null ? calculateRemainingBudget(currentUser) : "N/A"));
 
-        VBox personalInfoBox = new VBox(10, savedAmountLabel, remainingBudgetLabel);
-        personalInfoBox.setPadding(new Insets(10));
-        personalInfoBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
-        personalInfoBox.setPrefSize(300, 100);
+        // 设置标签样式
+        savedAmountLabel.setStyle("-fx-font-size: 16px; -fx-padding: 10px;");
+        remainingBudgetLabel.setStyle("-fx-font-size: 16px; -fx-padding: 10px;");
 
+        // 将标签添加到 newBox 中
+        newBox.getChildren().addAll(savedAmountLabel, remainingBudgetLabel);
 
-        VBox budgetBox = new VBox(10);
-        budgetBox.setPadding(new Insets(10));
-        budgetBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
-        budgetBox.setPrefSize(300, 250);
+        // 创建另一个 VBox
+        VBox anotherBox = new VBox();
+        anotherBox.setAlignment(Pos.CENTER);
+        anotherBox.setPadding(new Insets(10));
+        anotherBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+        // 增大高度
+        anotherBox.setPrefHeight(250);
+        HBox.setHgrow(anotherBox, Priority.ALWAYS);
 
-        // 创建消费趋势区域，预留位置用于展示消费趋势图表等信息
-        HBox topBox = new HBox(20, personalInfoBox, budgetBox);
-        topBox.setAlignment(Pos.TOP_CENTER);
-        topBox.setPadding(new Insets(10));
+        // 创建饼状图
+        PieChart pieChart = createPieChart();
+        anotherBox.getChildren().add(pieChart);
+
+        // 将 newBox 和 anotherBox 组合到一个 HBox 中
+        HBox sideBySideBox = new HBox(10, newBox, anotherBox);
+        sideBySideBox.setAlignment(Pos.CENTER);
+        sideBySideBox.setMaxWidth(Double.MAX_VALUE);
+
         // 创建 LineChart
         lineChart = new ConsumerTrendChart(currentUser).createChart();
 
@@ -210,16 +235,51 @@ public class DashboardView extends Application {
         imageBox.setAlignment(Pos.TOP_CENTER);
         imageBox.setPadding(new Insets(10));
         imageBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
-        imageBox.setPrefSize(300, 300);
+        imageBox.setPrefSize(620, 300);
 
         // 将各个区域组合到主布局中
-        VBox mainLayout = new VBox(20, titleLabel, navigationBox, topBox, imageBox);
+        VBox mainLayout = new VBox(15, titleLabel, navigationBox, sideBySideBox, imageBox); // 缩小间距
         mainLayout.setAlignment(Pos.CENTER);
         mainLayout.setPadding(new Insets(20));
 
         // 创建场景并设置到主舞台
         Scene scene = new Scene(mainLayout, 1000, 800);
         primaryStage.setScene(scene);
+    }
+
+    private PieChart createPieChart() {
+        // 创建 SpendingStructureChart 实例以获取数据
+        SpendingStructureChart spendingStructureChart = new SpendingStructureChart(currentUser);
+        // 加载数据
+        spendingStructureChart.loadTransactionData();
+
+        // 获取数据
+        Map<String, Double> categoryTotals = spendingStructureChart.getCategoryTotals();
+        double totalSpending = spendingStructureChart.getTotalSpending();
+
+        // 创建饼图数据集
+        ObservableList<PieChart.Data> pieChartData = FXCollections.observableArrayList();
+
+        // 添加数据
+        for (Map.Entry<String, Double> entry : categoryTotals.entrySet()) {
+            String category = entry.getKey();
+            double amount = entry.getValue();
+            pieChartData.add(new PieChart.Data(category, amount));
+        }
+
+        // 创建饼图
+        PieChart pieChart = new PieChart(pieChartData);
+        pieChart.setTitle("Spending by Category in Last 3 Weeks");
+        pieChart.setTitleSide(javafx.geometry.Side.TOP);
+        pieChart.setLegendSide(javafx.geometry.Side.BOTTOM);
+        pieChart.setLabelsVisible(true);
+        pieChart.setLabelLineLength(20);
+        pieChart.setStartAngle(90);
+        pieChart.setAnimated(true);
+        pieChart.setMinSize(200, 200);
+        pieChart.setClockwise(false);
+
+        return pieChart;
     }
 
     private void updateChart() {
@@ -243,7 +303,6 @@ public class DashboardView extends Application {
     private void updateSavedAmounts() {
         // 调用 UserManager 的 checkTransactionsFile 方法更新 savedAmount 和 annualSavedAmount
         userManager.checkTransactionsFile();
-
     }
 
     private double calculateRemainingBudget(User user) {
