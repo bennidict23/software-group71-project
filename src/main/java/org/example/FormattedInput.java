@@ -1,9 +1,11 @@
 package org.example;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -13,6 +15,8 @@ import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.converter.DefaultStringConverter;
+import org.example.utils.DeepSeekCategoryService;
+import org.example.utils.LoadingUtils;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -20,12 +24,16 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 public class FormattedInput extends Application {
 
     private TableView<ObservableStringArray> tableView;
     private final ObservableList<ObservableStringArray> data = FXCollections.observableArrayList();
     private File lastSelectedFile;
+    private StackPane rootPane; // 添加根StackPane用于显示加载指示器
+    private DeepSeekCategoryService categoryService; // 添加分类服务
 
     // Form controls
     private DatePicker datePicker;
@@ -69,6 +77,12 @@ public class FormattedInput extends Application {
     public void start(Stage primaryStage) {
         primaryStage.setTitle("CSV Import and Record Management Tool");
 
+        // 初始化分类服务
+        categoryService = new DeepSeekCategoryService();
+
+        // 创建根布局为StackPane，用于叠加加载指示器
+        rootPane = new StackPane();
+
         // Create main layout
         VBox mainLayout = new VBox(10);
         mainLayout.setPadding(new Insets(20));
@@ -88,8 +102,11 @@ public class FormattedInput extends Application {
         // Add components to layout
         mainLayout.getChildren().addAll(buttonBox, tableView, formBox, statusLabel);
 
+        // 将主布局添加到根StackPane
+        rootPane.getChildren().add(mainLayout);
+
         // Create scene
-        Scene scene = new Scene(mainLayout, 1000, 800);
+        Scene scene = new Scene(rootPane, 1000, 800);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
@@ -268,49 +285,69 @@ public class FormattedInput extends Application {
         if (file != null) {
             lastSelectedFile = file;
 
-            // 微信常见编码优先级更高
-            String[] encodings = { "UTF-8", "GBK", "GB18030", "GB2312", "ISO-8859-1" };
-            boolean fileProcessed = false;
-            IOException lastError = null;
+            // 创建后台任务
+            Task<Boolean> importTask = new Task<>() {
+                @Override
+                protected Boolean call() throws Exception {
+                    // 微信常见编码优先级更高
+                    String[] encodings = { "UTF-8", "GBK", "GB18030", "GB2312", "ISO-8859-1" };
+                    boolean fileProcessed = false;
+                    IOException lastError = null;
 
-            for (String encoding : encodings) {
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(new FileInputStream(file), encoding))) {
+                    for (String encoding : encodings) {
+                        try (BufferedReader reader = new BufferedReader(
+                                new InputStreamReader(new FileInputStream(file), encoding))) {
 
-                    // 改进的文件类型检测
-                    FileType fileType = detectFileType(reader);
+                            // 改进的文件类型检测
+                            FileType fileType = detectFileType(reader);
 
-                    if (fileType == FileType.ALIPAY) {
-                        importAlipayWithEncoding(encoding);
-                        fileProcessed = true;
-                        break;
-                    } else if (fileType == FileType.WECHAT) {
-                        importWechatWithEncoding(encoding);
-                        fileProcessed = true;
-                        break;
-                    } else {
-                        try {
-                            importRegularCSV(file, encoding);
-                            fileProcessed = true;
-                            break;
+                            if (fileType == FileType.ALIPAY) {
+                                importAlipayWithEncoding(encoding);
+                                fileProcessed = true;
+                                break;
+                            } else if (fileType == FileType.WECHAT) {
+                                importWechatWithEncoding(encoding);
+                                fileProcessed = true;
+                                break;
+                            } else {
+                                try {
+                                    importRegularCSV(file, encoding);
+                                    fileProcessed = true;
+                                    break;
+                                } catch (IOException e) {
+                                    lastError = e;
+                                    continue;
+                                }
+                            }
                         } catch (IOException e) {
                             lastError = e;
                             continue;
                         }
                     }
-                } catch (IOException e) {
-                    lastError = e;
-                    continue;
-                }
-            }
 
-            if (!fileProcessed) {
-                String errorMsg = "Failed to import file.\n";
-                if (lastError != null) {
-                    errorMsg += "Last error: " + lastError.getMessage();
+                    if (!fileProcessed) {
+                        String errorMsg = "Failed to import file.\n";
+                        if (lastError != null) {
+                            errorMsg += "Last error: " + lastError.getMessage();
+                        }
+                        final String finalErrorMsg = errorMsg;
+                        Platform.runLater(() -> showErrorAlert("Import Error", finalErrorMsg));
+                        return false;
+                    }
+                    return true;
                 }
-                showErrorAlert("Import Error", errorMsg);
-            }
+            };
+
+            // 确保在JavaFX应用线程上显示加载指示器
+            Platform.runLater(() -> {
+                // 使用LoadingUtils显示加载指示器并执行后台任务
+                LoadingUtils.showLoadingIndicator(rootPane, importTask, success -> {
+                    if (success) {
+                        // 导入成功后，通知Dashboard可以显示折线图了
+                        DashboardView.setImportDone(true);
+                    }
+                });
+            });
         }
     }
 
@@ -403,6 +440,11 @@ public class FormattedInput extends Application {
             System.out.println("Category列索引: " + categoryIdx);
             System.out.println("Description列索引: " + descriptionIdx);
 
+            // 收集所有行数据，以便之后批量分类
+            List<String[]> rowsData = new ArrayList<>();
+            List<String> descriptions = new ArrayList<>();
+            List<String> amounts = new ArrayList<>();
+
             // 处理数据行
             int lineCount = 1; // 已经读取了表头
             while ((line = reader.readLine()) != null) {
@@ -433,25 +475,135 @@ public class FormattedInput extends Application {
                 // Amount列
                 record[3] = (amountIdx >= 0 && amountIdx < rowData.length) ? rowData[amountIdx] : "";
 
+                // Description列
+                record[5] = (descriptionIdx >= 0 && descriptionIdx < rowData.length) ? rowData[descriptionIdx] : "";
+
                 // Category列
+                // 如果CSV中有分类，就使用它，否则先用Uncategorized，后面会批量分类
                 record[4] = (categoryIdx >= 0 && categoryIdx < rowData.length && !rowData[categoryIdx].isEmpty())
                         ? rowData[categoryIdx]
                         : "Uncategorized";
 
-                // Description列
-                record[5] = (descriptionIdx >= 0 && descriptionIdx < rowData.length) ? rowData[descriptionIdx] : "";
-
-                data.add(new ObservableStringArray(record));
+                // 收集数据用于后续批量分类
+                rowsData.add(record);
+                descriptions.add(record[5]); // 收集描述
+                amounts.add(record[3]); // 收集金额
             }
 
-            // 导入成功后，通知Dashboard可以显示折线图了
-            DashboardView.setImportDone(true);
+            // 如果没有分类列，则使用DeepSeek批量分类
+            if (categoryIdx == -1 && !rowsData.isEmpty()) {
+                System.out.println("CSV文件没有Category列，将使用DeepSeek进行自动分类...");
 
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Import Successful");
-            alert.setHeaderText(null);
-            alert.setContentText("Successfully imported " + data.size() + " records (encoding: " + encoding + ")");
-            alert.showAndWait();
+                // 使用DeepSeekCategoryService进行分类（先计算好结果）
+                final DeepSeekCategoryService tempService = new DeepSeekCategoryService();
+                CompletableFuture<List<String>> categoriesFuture = tempService.classifyTransactionsAsync(descriptions,
+                        amounts);
+
+                // 在JavaFX应用线程上创建和显示任务
+                Platform.runLater(() -> {
+                    // 创建一个新的任务，在JavaFX线程中处理异步结果
+                    Task<List<String>> classifyTask = new Task<>() {
+                        @Override
+                        protected List<String> call() throws Exception {
+                            try {
+                                // 等待CompletableFuture完成（这里等待已经在进行的分类任务）
+                                return categoriesFuture.get();
+                            } finally {
+                                // 确保分类服务关闭
+                                tempService.shutdown();
+                            }
+                        }
+                    };
+
+                    // 显示加载指示器并执行分类任务
+                    LoadingUtils.showLoadingIndicator(rootPane, classifyTask, categories -> {
+                        if (categories != null) {
+                            // 更新每行的分类结果
+                            for (int i = 0; i < Math.min(rowsData.size(), categories.size()); i++) {
+                                rowsData.get(i)[4] = categories.get(i);
+                            }
+
+                            // 将所有数据添加到表格中
+                            for (String[] record : rowsData) {
+                                data.add(new ObservableStringArray(record));
+                            }
+
+                            // 显示成功信息
+                            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                            alert.setTitle("Import Successful");
+                            alert.setHeaderText(null);
+                            alert.setContentText("Successfully imported and classified " + data.size() +
+                                    " records (encoding: " + encoding + ")");
+                            alert.showAndWait();
+
+                            // 保存带分类的CSV文件
+                            saveCategorizedCSV();
+
+                            // 通知Dashboard可以显示折线图了
+                            DashboardView.setImportDone(true);
+                        }
+                    });
+
+                    // 启动任务（在执行LoadingUtils.showLoadingIndicator后）
+                    Thread thread = new Thread(classifyTask);
+                    thread.setDaemon(true);
+                    thread.start();
+                });
+            } else {
+                // 如果有分类列或没有数据，直接添加到表格
+                for (String[] record : rowsData) {
+                    data.add(new ObservableStringArray(record));
+                }
+
+                // 导入成功后，通知Dashboard可以显示折线图了
+                DashboardView.setImportDone(true);
+
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Import Successful");
+                alert.setHeaderText(null);
+                alert.setContentText("Successfully imported " + data.size() + " records (encoding: " + encoding + ")");
+                alert.showAndWait();
+            }
+        }
+    }
+
+    // 新增：保存带分类的CSV文件
+    private void saveCategorizedCSV() {
+        try {
+            File file = new File("transactions_categorized.csv");
+
+            try (BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
+
+                // 写入表头
+                writer.write("User,Source,Date,Amount,Category,Description");
+                writer.newLine();
+
+                // 写入数据
+                for (ObservableStringArray row : data) {
+                    String[] record = row.toArray();
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < record.length; i++) {
+                        String field = record[i];
+                        if (field.contains(",") || field.contains("\"") || field.contains("\n")) {
+                            sb.append("\"").append(field.replace("\"", "\"\"")).append("\"");
+                        } else {
+                            sb.append(field);
+                        }
+
+                        if (i < record.length - 1) {
+                            sb.append(",");
+                        }
+                    }
+                    writer.write(sb.toString());
+                    writer.newLine();
+                }
+
+                System.out.println("已将分类后的CSV保存到: " + file.getAbsolutePath());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            Platform.runLater(() -> showErrorAlert("Save Error", "Failed to save categorized CSV: " + e.getMessage()));
         }
     }
 
@@ -640,61 +792,80 @@ public class FormattedInput extends Application {
     }
 
     private void saveToTransactionCSV() {
-        try {
-            System.out.println("\n=== Data to be saved ===");
-            System.out.println("Total records: " + data.size());
-            for (int i = 0; i < data.size(); i++) {
-                String[] record = data.get(i).toArray();
-                System.out.printf("%d: [Source: %s, Date: %s, Amount: %s, Category: %s, Description: %s]%n",
-                        i + 1,
-                        record[1],
-                        record[2],
-                        record[3],
-                        record[4],
-                        record[5]);
-            }
-            System.out.println("===================\n");
-
-            File file = new File("transactions.csv");
-
-            try (BufferedWriter writer = new BufferedWriter(
-                    new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
-
-                // Always write header
-                writer.write("User,Source,Date,Amount,Category,Description");
-                writer.newLine();
-
-                for (ObservableStringArray row : data) {
-                    String[] record = row.toArray();
-                    StringBuilder sb = new StringBuilder();
-                    for (int i = 0; i < record.length; i++) {
-                        String field = record[i];
-                        if (field.contains(",") || field.contains("\"") || field.contains("\n")) {
-                            sb.append("\"").append(field.replace("\"", "\"\"")).append("\"");
-                        } else {
-                            sb.append(field);
-                        }
-
-                        if (i < record.length - 1) {
-                            sb.append(",");
-                        }
+        // 创建后台任务
+        Task<Boolean> saveTask = new Task<>() {
+            @Override
+            protected Boolean call() throws Exception {
+                try {
+                    System.out.println("\n=== Data to be saved ===");
+                    System.out.println("Total records: " + data.size());
+                    for (int i = 0; i < data.size(); i++) {
+                        String[] record = data.get(i).toArray();
+                        System.out.printf("%d: [Source: %s, Date: %s, Amount: %s, Category: %s, Description: %s]%n",
+                                i + 1,
+                                record[1],
+                                record[2],
+                                record[3],
+                                record[4],
+                                record[5]);
                     }
-                    writer.write(sb.toString());
-                    writer.newLine();
+                    System.out.println("===================\n");
+
+                    File file = new File("transactions.csv");
+
+                    try (BufferedWriter writer = new BufferedWriter(
+                            new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
+
+                        // Always write header
+                        writer.write("User,Source,Date,Amount,Category,Description");
+                        writer.newLine();
+
+                        for (ObservableStringArray row : data) {
+                            String[] record = row.toArray();
+                            StringBuilder sb = new StringBuilder();
+                            for (int i = 0; i < record.length; i++) {
+                                String field = record[i];
+                                if (field.contains(",") || field.contains("\"") || field.contains("\n")) {
+                                    sb.append("\"").append(field.replace("\"", "\"\"")).append("\"");
+                                } else {
+                                    sb.append(field);
+                                }
+
+                                if (i < record.length - 1) {
+                                    sb.append(",");
+                                }
+                            }
+                            writer.write(sb.toString());
+                            writer.newLine();
+                        }
+
+                        return true;
+                    } catch (IOException e) {
+                        Platform.runLater(() -> showErrorAlert("Save Error", "Failed to save data: " + e.getMessage()));
+                        return false;
+                    }
+                } catch (Exception e) {
+                    Platform.runLater(() -> showErrorAlert("Save Error", "Failed to save data: " + e.getMessage()));
+                    return false;
                 }
-
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Save Successful");
-                alert.setHeaderText(null);
-                alert.setContentText("Data successfully saved to: " + file.getAbsolutePath());
-                alert.showAndWait();
-
-            } catch (IOException e) {
-                showErrorAlert("Save Error", "Failed to save data: " + e.getMessage());
             }
-        } catch (Exception e) {
-            showErrorAlert("Save Error", "Failed to save data: " + e.getMessage());
-        }
+        };
+
+        // 确保在JavaFX应用线程上显示加载指示器
+        Platform.runLater(() -> {
+            // 使用LoadingUtils显示加载指示器并执行后台任务
+            LoadingUtils.showLoadingIndicator(rootPane, saveTask, success -> {
+                if (success) {
+                    Platform.runLater(() -> {
+                        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                        alert.setTitle("Save Successful");
+                        alert.setHeaderText(null);
+                        alert.setContentText("Data successfully saved to: transactions.csv");
+                        alert.showAndWait();
+                    });
+                }
+            });
+        });
     }
 
     private void showErrorAlert(String title, String message) {
@@ -703,5 +874,13 @@ public class FormattedInput extends Application {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    @Override
+    public void stop() {
+        // 确保在应用关闭时关闭分类服务
+        if (categoryService != null) {
+            categoryService.shutdown();
+        }
     }
 }
