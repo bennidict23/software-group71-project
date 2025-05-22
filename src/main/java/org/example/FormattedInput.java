@@ -8,11 +8,13 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.converter.DefaultStringConverter;
+import org.example.list.Transaction;
 import org.mozilla.universalchardet.UniversalDetector;
 
 import java.io.*;
@@ -26,8 +28,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class FormattedInput extends Application {
 
-    private TableView<ObservableStringArray> tableView;
-    private final ObservableList<ObservableStringArray> data = FXCollections.observableArrayList();
+    private TableView<Transaction> tableView;
+    private final ObservableList<Transaction> data = FXCollections.observableArrayList();
     private File lastSelectedFile;
     private AtomicLong nextId = new AtomicLong(1); // Simple ID generator
 
@@ -39,34 +41,6 @@ public class FormattedInput extends Application {
 
     public static void main(String[] args) {
         launch(args);
-    }
-
-    // Wrapper class to make String[] observable with ID
-    public static class ObservableStringArray {
-        private final ObservableList<SimpleStringProperty> properties;
-
-        public ObservableStringArray(String[] values) {
-            this.properties = FXCollections.observableArrayList();
-            for (String value : values) {
-                properties.add(new SimpleStringProperty(value));
-            }
-        }
-
-        public void set(int index, String value) {
-            properties.get(index).set(value);
-        }
-
-        public SimpleStringProperty getProperty(int index) {
-            return properties.get(index);
-        }
-
-        public String[] toArray() {
-            String[] array = new String[properties.size()];
-            for (int i = 0; i < array.length; i++) {
-                array[i] = properties.get(i).get();
-            }
-            return array;
-        }
     }
 
     @Override
@@ -138,31 +112,60 @@ public class FormattedInput extends Application {
         return buttonBox;
     }
 
-    private TableView<ObservableStringArray> createTableView() {
-        TableView<ObservableStringArray> table = new TableView<>();
+    private TableView<Transaction> createTableView() {
+        TableView<Transaction> table = new TableView<>();
         table.setEditable(true);
 
-        // Add ID column as the first column
-        String[] headers = {"ID", "User", "Source", "Date", "Amount", "Category", "Description"};
+        // Define columns
+        TableColumn<Transaction, Integer> idColumn = new TableColumn<>("ID");
+        idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
+        idColumn.setPrefWidth(80);
+        idColumn.setSortable(false); // ID 通常不需要排序
 
-        for (int i = 0; i < headers.length; i++) {
-            final int columnIndex = i;
-            TableColumn<ObservableStringArray, String> column = new TableColumn<>(headers[i]);
-            column.setCellValueFactory(cellData -> cellData.getValue().getProperty(columnIndex));
+        TableColumn<Transaction, String> userColumn = new TableColumn<>("User");
+        userColumn.setCellValueFactory(new PropertyValueFactory<>("user"));
 
-            // Make ID column not editable, only Source and beyond can be edited
-            if (i > 1) {
-                column.setCellFactory(TextFieldTableCell.forTableColumn(new DefaultStringConverter()));
-                column.setOnEditCommit(event -> {
-                    ObservableStringArray row = event.getRowValue();
-                    row.set(columnIndex, event.getNewValue());
-                });
-            }
-            column.setPrefWidth(i == 0 ? 80 : 120); // Make ID column narrower
-            table.getColumns().add(column);
-        }
+        TableColumn<Transaction, String> sourceColumn = new TableColumn<>("Source");
+        sourceColumn.setCellValueFactory(new PropertyValueFactory<>("source"));
 
+        TableColumn<Transaction, LocalDate> dateColumn = new TableColumn<>("Date");
+        dateColumn.setCellValueFactory(new PropertyValueFactory<>("date"));
+        dateColumn.setSortType(TableColumn.SortType.DESCENDING); // 默认按日期降序排序
+
+        TableColumn<Transaction, Double> amountColumn = new TableColumn<>("Amount");
+        amountColumn.setCellValueFactory(new PropertyValueFactory<>("amount"));
+        amountColumn.setCellFactory(TextFieldTableCell.forTableColumn(new javafx.util.converter.DoubleStringConverter()));
+
+        TableColumn<Transaction, String> categoryColumn = new TableColumn<>("Category");
+        categoryColumn.setCellValueFactory(new PropertyValueFactory<>("category"));
+        categoryColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+
+        TableColumn<Transaction, String> descriptionColumn = new TableColumn<>("Description");
+        descriptionColumn.setCellValueFactory(new PropertyValueFactory<>("description"));
+        descriptionColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+
+        // 添加列到 TableView
+        table.getColumns().addAll(idColumn, userColumn, sourceColumn, dateColumn, amountColumn, categoryColumn, descriptionColumn);
+
+        // 设置单元格可编辑
+        amountColumn.setOnEditCommit(event -> {
+            Transaction transaction = event.getRowValue();
+            transaction.amountProperty().set(event.getNewValue());
+        });
+
+        categoryColumn.setOnEditCommit(event -> {
+            Transaction transaction = event.getRowValue();
+            transaction.categoryProperty().set(event.getNewValue());
+        });
+
+        descriptionColumn.setOnEditCommit(event -> {
+            Transaction transaction = event.getRowValue();
+            transaction.descriptionProperty().set(event.getNewValue());
+        });
+
+        // 使用 ObservableList<Transaction> 作为数据源
         table.setItems(data);
+
         return table;
     }
 
@@ -214,13 +217,11 @@ public class FormattedInput extends Application {
 
     private void addRecord() {
         try {
-            // Validate input
             if (datePicker.getValue() == null) {
                 showErrorAlert("Input Error", "Please select a date");
                 return;
             }
 
-            // Validate amount is numeric
             try {
                 Double.parseDouble(amountField.getText().trim());
             } catch (NumberFormatException e) {
@@ -228,19 +229,20 @@ public class FormattedInput extends Application {
                 return;
             }
 
-            // Create record array with ID as first element
-            String[] record = new String[7]; // Now 7 elements including ID
-            record[0] = String.valueOf(nextId.getAndIncrement()); // Assign and increment ID
-            record[1] = DashboardView.getCurrentUser().getUsername(); // Username
-            record[2] = "manual"; // Source
-            record[3] = datePicker.getValue().format(DateTimeFormatter.ISO_DATE); // Date
-            record[4] = amountField.getText().trim(); // Amount
-            record[5] = categoryField.getText().trim().isEmpty() ? "Uncategorized" : categoryField.getText().trim(); // Category
-            record[6] = descriptionField.getText().trim(); // Description
+            // 创建 Transaction 对象
+            Transaction transaction = new Transaction(
+                    nextId.getAndIncrement(),
+                    DashboardView.getCurrentUser().getUsername(),
+                    "manual",
+                    datePicker.getValue(),
+                    Double.parseDouble(amountField.getText().trim()),
+                    categoryField.getText().trim().isEmpty() ? "Uncategorized" : categoryField.getText().trim(),
+                    descriptionField.getText().trim()
+            );
 
-            data.add(new ObservableStringArray(record));
+            data.add(transaction);
 
-            // Clear form
+            // 清空表单
             datePicker.setValue(LocalDate.now());
             amountField.clear();
             categoryField.clear();
@@ -252,7 +254,7 @@ public class FormattedInput extends Application {
     }
 
     private void deleteSelectedRows() {
-        ObservableList<ObservableStringArray> selectedRows = tableView.getSelectionModel().getSelectedItems();
+        ObservableList<Transaction> selectedRows = tableView.getSelectionModel().getSelectedItems();
         if (selectedRows.isEmpty()) {
             showErrorAlert("Delete Error", "No rows selected for deletion");
             return;
@@ -262,7 +264,7 @@ public class FormattedInput extends Application {
     }
 
     private void clearAllData() {
-        // Create confirmation dialog
+        // 创建确认对话框
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Confirm Clear All Data");
         alert.setHeaderText("Are you sure you want to clear all data?");
@@ -270,8 +272,8 @@ public class FormattedInput extends Application {
 
         alert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
-                data.clear(); // Clear all data
-                nextId.set(1); // Reset ID counter
+                data.clear(); // 清空所有数据
+                nextId.set(1); // 重置 ID 计数器
             }
         });
     }
@@ -287,13 +289,13 @@ public class FormattedInput extends Application {
         if (file != null) {
             lastSelectedFile = file;
 
-            // 1. First try to auto-detect encoding
+            // 1. 首先尝试自动检测编码
             String detectedEncoding = detectFileEncoding(file);
 
-            // 2. Fallback encoding list (prioritized)
+            // 2. 回退编码列表（优先级排序）
             String[] fallbackEncodings = {"UTF-8", "GBK", "GB18030", "GB2312", "ISO-8859-1"};
 
-            // 3. Try all possible encodings
+            // 3. 尝试所有可能的编码
             List<String> encodingsToTry = new ArrayList<>();
             if (detectedEncoding != null) {
                 encodingsToTry.add(detectedEncoding);
@@ -307,10 +309,10 @@ public class FormattedInput extends Application {
                 try (BufferedReader reader = new BufferedReader(
                         new InputStreamReader(new FileInputStream(file), encoding))) {
 
-                    // 4. Improved file type detection
+                    // 4. 改进的文件类型检测
                     FileType fileType = detectFileType(reader);
 
-                    // 5. Choose import method based on file type
+                    // 5. 根据文件类型选择导入方法
                     switch (fileType) {
                         case ALIPAY:
                             importAlipayWithEncoding(encoding);
@@ -323,12 +325,12 @@ public class FormattedInput extends Application {
                             break;
                     }
                     long maxId = data.stream()
-                            .mapToLong(row -> Long.parseLong(row.toArray()[0]))
+                            .mapToLong(Transaction::getId)
                             .max()
                             .orElse(0);
 
                     nextId.set(maxId + 1);
-                    saveNextId(); // 立即保存新的nextId
+                    saveNextId(); // 立即保存新的 nextId
 
                     fileProcessed = true;
                     break;
@@ -349,11 +351,11 @@ public class FormattedInput extends Application {
     }
 
     /**
-     * Auto-detect file encoding
+     * 自动检测文件编码
      */
     private String detectFileEncoding(File file) {
         try {
-            // Use juniversalchardet library to detect encoding
+            // 使用 juniversalchardet 库检测编码
             UniversalDetector detector = new UniversalDetector(null);
             byte[] buf = new byte[4096];
             try (FileInputStream fis = new FileInputStream(file)) {
@@ -369,7 +371,7 @@ public class FormattedInput extends Application {
 
             if (encoding != null) {
                 System.out.println("Detected encoding: " + encoding);
-                // Convert detected encoding to Java-supported encoding name
+                // 将检测到的编码转换为 Java 支持的编码名称
                 if (encoding.equalsIgnoreCase("GB-18030")) {
                     return "GB18030";
                 }
@@ -385,22 +387,22 @@ public class FormattedInput extends Application {
     }
 
     /**
-     * Improved file type detection method
+     * 改进的文件类型检测方法
      */
     private FileType detectFileType(BufferedReader reader) throws IOException {
-        reader.mark(8192); // Mark to reset later
+        reader.mark(8192); // 标记以便稍后重置
         String line;
         int lineCount = 0;
         boolean hasAlipayMarker = false;
         boolean hasWechatMarker = false;
 
         while ((line = reader.readLine()) != null && lineCount < 10) {
-            // Alipay detection - enhanced feature detection
+            // Alipay 检测 - 增强特征检测
             if (line.contains("支付宝")) {
                 hasAlipayMarker = true;
             }
 
-            // WeChat detection - enhanced feature detection
+            // WeChat 检测 - 增强特征检测
             if (line.contains("微信支付账单明细")) {
                 hasWechatMarker = true;
             }
@@ -408,7 +410,7 @@ public class FormattedInput extends Application {
             lineCount++;
         }
 
-        reader.reset(); // Reset to marked position
+        reader.reset(); // 重置到标记位置
 
         if (hasAlipayMarker) {
             return FileType.ALIPAY;
@@ -419,7 +421,7 @@ public class FormattedInput extends Application {
         return FileType.REGULAR;
     }
 
-    // File type enum
+    // 文件类型枚举
     private enum FileType {
         ALIPAY, WECHAT, REGULAR
     }
@@ -433,42 +435,35 @@ public class FormattedInput extends Application {
 
             while ((line = reader.readLine()) != null) {
                 if (isFirstLine) {
-                    isFirstLine = false;  // Skip header line
+                    isFirstLine = false; // 跳过标题行
                     continue;
                 }
 
                 String[] rowData = parseCsvLine(line);
-                String[] record = new String[7]; // 7 elements including ID
 
-                // Always assign new ID
-                record[0] = String.valueOf(nextId.getAndIncrement());
+                if (rowData.length >= 6) { // 至少需要 6 列
+                    try {
+                        long id = nextId.getAndIncrement();
+                        String user = rowData.length > 0 ? rowData[0].trim() : DashboardView.getCurrentUser().getUsername();
+                        String source = rowData.length > 1 ? rowData[1].trim() : "import";
+                        LocalDate date = rowData.length > 2 ? LocalDate.parse(rowData[2].trim()) : LocalDate.now();
+                        double amount = rowData.length > 3 ? Double.parseDouble(rowData[3].trim()) : 0.0;
+                        String category = rowData.length > 4 ? rowData[4].trim() : "Uncategorized";
+                        String description = rowData.length > 5 ? rowData[5].trim() : "";
 
-                if (rowData.length >= 6) {  // At least 6 columns (excluding ID)
-                    // Format: User,Source,Date,Amount,Category,Description
-                    record[1] = rowData.length > 0 ? rowData[0].trim() : DashboardView.getCurrentUser().getUsername();
-                    record[2] = rowData.length > 1 ? rowData[1].trim() : "import";
-                    record[3] = rowData.length > 2 ? rowData[2].trim() : "";
-                    record[4] = rowData.length > 3 ? rowData[3].trim() : "";
-                    record[5] = rowData.length > 4 ? rowData[4].trim() : "Uncategorized";
-                    record[6] = rowData.length > 5 ? rowData[5].trim() : "";
-                } else {
-                    // Less than 6 columns (old format or incomplete data)
-                    record[1] = DashboardView.getCurrentUser().getUsername();
-                    record[2] = "import";
-                    record[3] = rowData.length > 0 ? rowData[0] : "";
-                    record[4] = rowData.length > 1 ? rowData[1] : "";
-                    record[5] = rowData.length > 2 ? rowData[2] : "Uncategorized";
-                    record[6] = rowData.length > 3 ? rowData[3] : "";
+                        Transaction transaction = new Transaction(id, user, source, date, amount, category, description);
+                        data.add(transaction);
+                        recordsImported++;
+                    } catch (Exception e) {
+                        System.err.println("Failed to parse line: " + line);
+                    }
                 }
-
-                data.add(new ObservableStringArray(record));
-                recordsImported++;
             }
 
-            // Save updated nextId
+            // 保存 updated nextId
             saveNextId();
 
-            // Notify Dashboard that import is complete
+            // 通知 Dashboard 导入完成
             DashboardView.setImportDone(true);
 
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -488,45 +483,54 @@ public class FormattedInput extends Application {
             int lineCount = 0;
             int recordsImported = 0;
 
-            // Skip first 17 lines
+            // 跳过前 17 行
             while (lineCount < 17 && (line = reader.readLine()) != null) {
                 lineCount++;
             }
 
-            // Process data starting from line 18
+            // 从第 18 行开始处理数据
             while ((line = reader.readLine()) != null) {
                 String[] rowData = parseCsvLine(line);
 
-                // Ensure enough columns and not empty row
+                // 确保足够的列且不是空行
                 if (rowData.length >= 6 && !isEmptyRow(rowData)) {
-                    String[] fullRowData = new String[7]; // 7 elements including ID
+                    String[] fullRowData = new String[7]; // 7 个元素包括 ID
 
-                    // Process date - extract date part from transaction time
+                    // 处理日期 - 从交易时间中提取日期部分
                     String rawDate = rowData[0];
                     String processedDate = processDate(rawDate);
 
-                    // Process amount - remove currency symbol
+                    // 处理金额 - 移除货币符号
                     String rawAmount = rowData[5];
                     String processedAmount = processAmount(rawAmount);
 
-                    // Assign new ID
+                    // 分配新的 ID
                     fullRowData[0] = String.valueOf(nextId.getAndIncrement());
-                    fullRowData[1] = DashboardView.getCurrentUser().getUsername();  // User
-                    fullRowData[2] = "wechat";         // Source
-                    fullRowData[3] = processedDate;     // Date (column 1, processed)
-                    fullRowData[4] = processedAmount;   // Amount (column 6, processed)
-                    fullRowData[5] = "Uncategorized";   // Category (hardcoded)
-                    fullRowData[6] = rowData[1]+rowData[2]; // Description (columns 2+3 combined)
+                    fullRowData[1] = DashboardView.getCurrentUser().getUsername(); // 用户
+                    fullRowData[2] = "wechat"; // 来源
+                    fullRowData[3] = processedDate; // 日期（列 1，已处理）
+                    fullRowData[4] = processedAmount; // 金额（列 6，已处理）
+                    fullRowData[5] = "Uncategorized"; // 类别（硬编码）
+                    fullRowData[6] = rowData[1] + rowData[2]; // 描述（列 2 + 列 3 组合）
 
-                    data.add(new ObservableStringArray(fullRowData));
+                    // 创建 Transaction 对象并添加到数据列表
+                    data.add(new Transaction(
+                            Integer.parseInt(fullRowData[0]),
+                            fullRowData[1],
+                            fullRowData[2],
+                            LocalDate.parse(fullRowData[3]),
+                            Double.parseDouble(fullRowData[4]),
+                            fullRowData[5],
+                            fullRowData[6]
+                    ));
                     recordsImported++;
                 }
             }
 
-            // Save updated nextId
+            // 保存 updated nextId
             saveNextId();
 
-            // Notify Dashboard that import is complete
+            // 通知 Dashboard 导入完成
             DashboardView.setImportDone(true);
 
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -541,7 +545,7 @@ public class FormattedInput extends Application {
     }
 
     private void importAlipayWithEncoding(String encoding) {
-        boolean firstRowSkipped = false; // Flag for whether first row is skipped
+        boolean firstRowSkipped = false; // 标记是否跳过第一行
         int recordsImported = 0;
 
         try (BufferedReader reader = new BufferedReader(
@@ -551,18 +555,18 @@ public class FormattedInput extends Application {
             while ((line = reader.readLine()) != null) {
                 String[] rowData = parseCsvLine(line);
 
-                // Check conditions and if it's the first time
+                // 检查条件并且是否是第一行
                 if (rowData.length >= 7 && !isEmptyRow(rowData)) {
                     if (!firstRowSkipped) {
-                        firstRowSkipped = true; // Mark first row as skipped
-                        continue; // Skip current line
+                        firstRowSkipped = true; // 标记第一行已跳过
+                        continue; // 跳过当前行
                     }
 
-                    String[] fullRowData = new String[7]; // 7 elements including ID
+                    String[] fullRowData = new String[7]; // 7 个元素包括 ID
                     String rawDate = rowData[0];
                     String processedDate = processDate(rawDate);
 
-                    // Assign new ID
+                    // 分配新的 ID
                     fullRowData[0] = String.valueOf(nextId.getAndIncrement());
                     fullRowData[1] = DashboardView.getCurrentUser().getUsername();
                     fullRowData[2] = "alipay";
@@ -571,15 +575,24 @@ public class FormattedInput extends Application {
                     fullRowData[5] = "Uncategorized";
                     fullRowData[6] = rowData[1] + rowData[4];
 
-                    data.add(new ObservableStringArray(fullRowData));
+                    // 创建 Transaction 对象并添加到数据列表
+                    data.add(new Transaction(
+                            Integer.parseInt(fullRowData[0]),
+                            fullRowData[1],
+                            fullRowData[2],
+                            LocalDate.parse(fullRowData[3]),
+                            Double.parseDouble(fullRowData[4]),
+                            fullRowData[5],
+                            fullRowData[6]
+                    ));
                     recordsImported++;
                 }
             }
 
-            // Save updated nextId
+            // 保存 updated nextId
             saveNextId();
 
-            // Notify Dashboard that import is complete
+            // 通知 Dashboard 导入完成
             DashboardView.setImportDone(true);
 
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -631,11 +644,11 @@ public class FormattedInput extends Application {
         if (file != null) {
             try (BufferedWriter writer = new BufferedWriter(
                     new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
-                // Write header with ID matching table: ID,User,Source,Date,Amount,Category,Description
+                // 写入表头
                 writer.write("ID,User,Source,Date,Amount,Category,Description");
                 writer.newLine();
 
-                // Write example rows with IDs
+                // 写入示例行
                 String currentUser = DashboardView.getCurrentUser().getUsername();
                 writer.write(String.format("1,%s,manual,2025-04-13,5000,Uncategorized,Salary", currentUser));
                 writer.newLine();
@@ -682,22 +695,6 @@ public class FormattedInput extends Application {
 
     private void saveToTransactionCSV() {
         try {
-            System.out.println("\n=== Data to be saved ===");
-            System.out.println("Total records: " + data.size());
-            for (int i = 0; i < data.size(); i++) {
-                String[] record = data.get(i).toArray();
-                System.out.printf("%d: [ID: %s, User: %s, Source: %s, Date: %s, Amount: %s, Category: %s, Description: %s]%n",
-                        i + 1,
-                        record[0],
-                        record[1],
-                        record[2],
-                        record[3],
-                        record[4],
-                        record[5],
-                        record[6]);
-            }
-            System.out.println("===================\n");
-
             // 创建用户特定的文件名
             String username = DashboardView.getCurrentUser().getUsername();
             File file = new File(username + "_transactions.csv");
@@ -706,29 +703,22 @@ public class FormattedInput extends Application {
             try (BufferedWriter writer = new BufferedWriter(
                     new OutputStreamWriter(new FileOutputStream(file, true), StandardCharsets.UTF_8))) {
 
-                // 如果文件不存在，才写入表头
+                // 如果文件不存在，写入表头
                 if (!fileExists) {
                     writer.write("ID,User,Source,Date,Amount,Category,Description");
                     writer.newLine();
                 }
 
                 // 写入数据记录
-                for (ObservableStringArray row : data) {
-                    String[] record = row.toArray();
-                    StringBuilder sb = new StringBuilder();
-                    for (int i = 0; i < record.length; i++) {
-                        String field = record[i];
-                        if (field.contains(",") || field.contains("\"") || field.contains("\n")) {
-                            sb.append("\"").append(field.replace("\"", "\"\"")).append("\"");
-                        } else {
-                            sb.append(field);
-                        }
-
-                        if (i < record.length - 1) {
-                            sb.append(",");
-                        }
-                    }
-                    writer.write(sb.toString());
+                for (Transaction transaction : data) {
+                    writer.write(String.format("%d,%s,%s,%s,%.2f,%s,%s",
+                            transaction.getId(),
+                            transaction.getUser(),
+                            transaction.getSource(),
+                            transaction.getDate().format(DateTimeFormatter.ISO_DATE),
+                            transaction.getAmount(),
+                            transaction.getCategory(),
+                            transaction.getDescription()));
                     writer.newLine();
                 }
 
@@ -745,11 +735,12 @@ public class FormattedInput extends Application {
             showErrorAlert("保存错误", "保存数据失败: " + e.getMessage());
         }
 
-        // 保存后清空当前数据表，防止重复保存
+        // 清空当前数据表，防止重复保存
         data.clear();
     }
+
     private void loadNextId() {
-        File file = new File(DashboardView.getCurrentUser().getUsername()+"_nextId.txt");
+        File file = new File(DashboardView.getCurrentUser().getUsername() + "_nextId.txt");
         if (file.exists()) {
             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                 String line = reader.readLine();
@@ -758,30 +749,32 @@ public class FormattedInput extends Application {
                     if (loadedId > 0) {
                         nextId.set(loadedId);
                     } else {
-                        nextId.set(1); // 如果ID不合法，设为1
+                        nextId.set(1); // 如果 ID 不合法，设为 1
                         saveNextId();  // 保存更正后的值
                     }
                 } else {
-                    nextId.set(1); // 如果文件为空，设为1
+                    nextId.set(1); // 如果文件为空，设为 1
                     saveNextId();
                 }
             } catch (IOException | NumberFormatException e) {
                 System.err.println("无法加载 nextId: " + e.getMessage());
-                nextId.set(1); // 出错时使用默认值1
+                nextId.set(1); // 出错时使用默认值 1
                 saveNextId();
             }
         } else {
-            nextId.set(1); // 文件不存在时使用默认值1
+            nextId.set(1); // 文件不存在时使用默认值 1
             saveNextId();
         }
     }
+
     private void saveNextId() {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(DashboardView.getCurrentUser().getUsername()+"_nextId.txt"))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(DashboardView.getCurrentUser().getUsername() + "_nextId.txt"))) {
             writer.write(String.valueOf(nextId.get()));
         } catch (IOException e) {
             System.err.println("无法保存 nextId: " + e.getMessage());
         }
     }
+
     private void showErrorAlert(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(title);
@@ -789,4 +782,5 @@ public class FormattedInput extends Application {
         alert.setContentText(message);
         alert.showAndWait();
     }
+
 }
