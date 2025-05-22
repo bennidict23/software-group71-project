@@ -1,4 +1,4 @@
-package org.example.view;
+package org.example.dataImport;
 
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
