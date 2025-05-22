@@ -13,8 +13,10 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import org.example.analysis.SpendingStructureChart;
+import org.example.dataImport.DataImportController;
 import org.example.list.TransactionViewer;
 import org.example.analysis.AnalysisView;
+
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -42,13 +44,13 @@ public class DashboardView extends Application {
     // 标记是否已导入过数据
     private static boolean importDone = false;
 
-    /** 由外部（FormattedInput.importCSV）调用，标记已导入数据 */
+    /** 由外部（DataImport）调用，标记已导入数据 */
     public static void setImportDone(boolean done) {
         importDone = done;
     }
 
-    // 格式化输入页面对象，用于处理格式化输入相关操作
-    private FormattedInput formattedInput = null;
+    // DataImport控制器对象，用于处理数据导入相关操作
+    private DataImportController dataImportController = null;
     // 用于显示消费趋势的折线图
     private LineChart<String, Number> lineChart;
     // 定时任务，用于定期更新 savedAmount 和 annualSavedAmount
@@ -98,14 +100,9 @@ public class DashboardView extends Application {
 
         primaryStage.setTitle("User Dashboard");
 
-        // 如果 formattedInput 对象为空，进行初始化
-        if (formattedInput == null) {
-            formattedInput = new FormattedInput();
-        }
-
         // 初始化页面选择下拉框，添加页面选项，并设置页面切换逻辑
         pageSelector = new ComboBox<>();
-        pageSelector.getItems().addAll("Dashboard", "Formatted Input", "Transaction Viewer", "Analysis", "Set Goal", "Set Budget", "Change Password");
+        pageSelector.getItems().addAll("Dashboard", "Data Import", "Transaction Viewer", "Analysis", "Set Goal", "Set Budget", "Change Password");
         pageSelector.setPromptText("Select a page...");
         pageSelector.setOnAction(e -> {
             String selectedPage = pageSelector.getValue();
@@ -114,11 +111,15 @@ public class DashboardView extends Application {
             }
             if ("Dashboard".equals(selectedPage)) {
                 showDashboard(primaryStage);
-            } else if ("Formatted Input".equals(selectedPage)) {
+            } else if ("Data Import".equals(selectedPage)) {
                 try {
-                    formattedInput.start(primaryStage);
+                    // 创建新的DataImportController实例并显示
+                    String username = (currentUser != null) ? currentUser.getUsername() : "default_user";
+                    dataImportController = new DataImportController(primaryStage, username);
+                    dataImportController.show();
                 } catch (Exception ex) {
                     ex.printStackTrace();
+                    showAlert(Alert.AlertType.ERROR, "Error", "Failed to open Data Import page: " + ex.getMessage());
                 }
             } else if ("Transaction Viewer".equals(selectedPage)) {
                 try {
