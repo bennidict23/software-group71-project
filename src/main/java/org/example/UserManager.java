@@ -1,15 +1,16 @@
 package org.example;
 
-import javafx.application.Platform;
-import javafx.scene.control.Alert;
-
 import java.io.*;
-import java.nio.file.Files;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import javafx.application.Platform;
+import javafx.scene.control.Alert;
+import org.example.DashboardView;
+import org.example.User;
+
+import java.nio.file.Files;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -20,6 +21,7 @@ public class UserManager {
     private static final String TRANSACTION_FILE = "transactions.csv";
 
     private ScheduledExecutorService scheduler;
+    private boolean isLoggedIn = false; // 标志变量，表示是否有用户登录
 
     public UserManager() {
         // 如果文件不存在，则创建并添加表头
@@ -35,7 +37,7 @@ public class UserManager {
         if (!file.exists()) {
             try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
                 writer.println(
-                        "username,annualTarget,monthlyTarget,monthlyBudget,shoppingBudget,transportBudget,dietBudget,amusementBudget,savedAmount,annualSavedAmount,currentYear,currentMonth");
+                        "username,annualTarget,monthlyTarget,monthlyBudget,housingBudget,shoppingBudget,foodDiningBudget,giftsDonationsBudget,transportationBudget,entertainmentBudget,personalCareBudget,healthcareBudget,savedAmount,annualSavedAmount,currentYear,currentMonth");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -43,15 +45,15 @@ public class UserManager {
         file = new File(TRANSACTION_FILE);
         if (!file.exists()) {
             try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
-                writer.println("Id,User,Source,Date,Amount,Category,Description");
+                writer.println("User,Source,Date,Amount,Category,Description");
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-        // 启动定时任务，每十秒检查一次 transactions.csv 文件的变化
+        // 启动定时任务，每5秒检查一次transactions.csv文件的变化
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleAtFixedRate(this::checkTransactionsFile, 0, 10, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(this::checkTransactionsFile, 0, 5, TimeUnit.SECONDS);
     }
 
     // 注册用户的方法
@@ -73,7 +75,7 @@ public class UserManager {
     public User getUser(String username) {
         try (BufferedReader br = new BufferedReader(new FileReader(USERS_FILE))) {
             String line;
-            // 跳过标题行
+            // 跨过标题行
             br.readLine();
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
@@ -81,6 +83,8 @@ public class UserManager {
                     User user = new User(parts[0], parts[1]);
                     // 确保加载用户设置
                     loadUserSettings(user);
+                    // 启动时初始化savedAmount和annualSavedAmount
+                    initializeSavedAmounts(user);
                     return user;
                 }
             }
@@ -143,9 +147,15 @@ public class UserManager {
     public boolean authenticate(String username, String password) {
         User user = getUser(username);
         if (user != null) {
+            isLoggedIn = true; // 用户登录成功，设置标志变量
             return user.getPassword().equals(password);
         }
         return false;
+    }
+
+    // 用户登出
+    public void logout() {
+        isLoggedIn = false; // 用户登出，清除标志变量
     }
 
     // 重置用户密码
@@ -160,32 +170,47 @@ public class UserManager {
             br.readLine(); // 跳过标题行
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
-                if (parts.length >= 12 && parts[0].equals(user.getUsername())) {
-                    // 获取当前年份
+                if (parts.length >= 16 && parts[0].equals(user.getUsername())) {
+                    // 获取当前年份和月份
                     int currentYear = LocalDate.now().getYear();
-                    // 获取用户设置中的年份
-                    int userYear = Integer.parseInt(parts[10]);
+                    int currentMonth = LocalDate.now().getMonthValue();
+                    // 获取用户设置中的年份和月份
+                    int userYear = Integer.parseInt(parts[14]);
+                    int userMonth = Integer.parseInt(parts[15]);
 
-                    // 如果当前年份与用户设置中的年份不一致，重置年储蓄目标
+                    // 如果到了新的年份，重置年设置
                     if (currentYear != userYear) {
-                        // 调用 resetAnnualSettings 方法重置所有年相关设置
                         user.resetAnnualSettings();
                         user.setCurrentYear(currentYear);
+                        user.setCurrentMonth(currentMonth);
                         // 保存更新后的设置
                         saveUserSettings(user);
-                    } else {
-                        // 如果年份一致，加载用户设置
+                    }
+                    // 如果到了新的月份，重置月设置
+                    else if (currentMonth != userMonth) {
+                        user.resetMonthlySettings();
+                        user.setCurrentYear(currentYear);
+                        user.setCurrentMonth(currentMonth);
+                        // 保存更新后的设置
+                        saveUserSettings(user);
+                    }
+                    else {
+                        // 如果年份和月份一致，加载用户设置
                         user.setAnnualTarget(Double.parseDouble(parts[1]));
                         user.setMonthlyTarget(Double.parseDouble(parts[2]));
                         user.setMonthlyBudget(Double.parseDouble(parts[3]));
-                        user.setShoppingBudget(Double.parseDouble(parts[4]));
-                        user.setTransportBudget(Double.parseDouble(parts[5]));
-                        user.setDietBudget(Double.parseDouble(parts[6]));
-                        user.setAmusementBudget(Double.parseDouble(parts[7]));
-                        user.setSavedAmount(Double.parseDouble(parts[8]));
-                        user.setAnnualSavedAmount(Double.parseDouble(parts[9]));
-                        user.setCurrentYear(Integer.parseInt(parts[10]));
-                        user.setCurrentMonth(Integer.parseInt(parts[11]));
+                        user.setHousingBudget(Double.parseDouble(parts[4]));
+                        user.setShoppingBudget(Double.parseDouble(parts[5]));
+                        user.setFoodDiningBudget(Double.parseDouble(parts[6]));
+                        user.setGiftsDonationsBudget(Double.parseDouble(parts[7]));
+                        user.setTransportationBudget(Double.parseDouble(parts[8]));
+                        user.setEntertainmentBudget(Double.parseDouble(parts[9]));
+                        user.setPersonalCareBudget(Double.parseDouble(parts[10]));
+                        user.setHealthcareBudget(Double.parseDouble(parts[11]));
+                        user.setSavedAmount(Double.parseDouble(parts[12]));
+                        user.setAnnualSavedAmount(Double.parseDouble(parts[13]));
+                        user.setCurrentYear(Integer.parseInt(parts[14]));
+                        user.setCurrentMonth(Integer.parseInt(parts[15]));
                     }
                 }
             }
@@ -197,12 +222,10 @@ public class UserManager {
     // 保存用户设置
     public void saveUserSettings(User user) {
         File inputFile = new File(SETTINGS_FILE);
-        // —— 如果不存在，就先创建并写入标题
+        // 如果不存在，就先创建并写入标题
         if (!inputFile.exists()) {
             try (PrintWriter writer = new PrintWriter(new FileWriter(inputFile))) {
-                writer.println("username,annualTarget,monthlyTarget,monthlyBudget,"
-                        + "shoppingBudget,transportBudget,dietBudget,amusementBudget,"
-                        + "savedAmount,annualSavedAmount,currentYear,currentMonth");
+                writer.println("username,annualTarget,monthlyTarget,monthlyBudget,housingBudget,shoppingBudget,foodDiningBudget,giftsDonationsBudget,transportationBudget,entertainmentBudget,personalCareBudget,healthcareBudget,savedAmount,annualSavedAmount,currentYear,currentMonth");
             } catch (IOException e) {
                 e.printStackTrace();
                 return;
@@ -216,14 +239,18 @@ public class UserManager {
         // 下面就照原来的逻辑：先把所有行读进来，更新这一行，然后写回……
         try (BufferedReader br = new BufferedReader(new FileReader(inputFile))) {
             String line = br.readLine();
-            if (line != null) lines.add(line);
+            if (line != null) {
+                lines.add(line);
+            }
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
                 if (parts[0].equals(user.getUsername())) {
                     // 这里拼一行新的
                     lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + ","
-                            + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget() + ","
-                            + user.getDietBudget() + "," + user.getAmusementBudget() + ","
+                            + user.getMonthlyBudget() + "," + user.getHousingBudget() + "," + user.getShoppingBudget() + ","
+                            + user.getFoodDiningBudget() + "," + user.getGiftsDonationsBudget() + ","
+                            + user.getTransportationBudget() + "," + user.getEntertainmentBudget() + ","
+                            + user.getPersonalCareBudget() + "," + user.getHealthcareBudget() + ","
                             + user.getSavedAmount() + "," + user.getAnnualSavedAmount() + ","
                             + user.getCurrentYear() + "," + user.getCurrentMonth());
                     found = true;
@@ -237,15 +264,19 @@ public class UserManager {
 
         if (!found) {
             lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + ","
-                    + user.getMonthlyBudget() + "," + user.getShoppingBudget() + "," + user.getTransportBudget() + ","
-                    + user.getDietBudget() + "," + user.getAmusementBudget() + ","
+                    + user.getMonthlyBudget() + "," + user.getHousingBudget() + "," + user.getShoppingBudget() + ","
+                    + user.getFoodDiningBudget() + "," + user.getGiftsDonationsBudget() + ","
+                    + user.getTransportationBudget() + "," + user.getEntertainmentBudget() + ","
+                    + user.getPersonalCareBudget() + "," + user.getHealthcareBudget() + ","
                     + user.getSavedAmount() + "," + user.getAnnualSavedAmount() + ","
                     + user.getCurrentYear() + "," + user.getCurrentMonth());
         }
 
         // 写回临时文件然后替换
         try (PrintWriter writer = new PrintWriter(new FileWriter(tempFile))) {
-            for (String l : lines) writer.println(l);
+            for (String l : lines) {
+                writer.println(l);
+            }
         } catch (IOException e) {
             e.printStackTrace();
             return;
@@ -269,8 +300,88 @@ public class UserManager {
         }
     }
 
+    // 初始化savedAmount和annualSavedAmount
+    private void initializeSavedAmounts(User user) {
+        double monthlyExpenses = getMonthlyTotalExpenses(user);
+        double annualExpenses = getAnnualTotalExpenses(user);
+
+        user.setSavedAmount(3000 + monthlyExpenses);
+        user.setAnnualSavedAmount(36000 + annualExpenses);
+
+        saveUserSettings(user);
+    }
+
+    // 获取本月总支出
+    public double getMonthlyTotalExpenses(User user) {
+        LocalDate currentDate = LocalDate.now();
+        int currentYear = currentDate.getYear();
+        int currentMonth = currentDate.getMonthValue();
+        double totalExpenses = 0.0;
+        double totalIncome = 0.0;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(TRANSACTION_FILE))) {
+            String line;
+            br.readLine(); // 跳过标题行
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 6 && parts[0].equals(user.getUsername())) {
+                    LocalDate date = LocalDate.parse(parts[2]);
+                    double amount = Double.parseDouble(parts[3]);
+
+                    if (date.getYear() == currentYear && date.getMonthValue() == currentMonth) {
+                        if (amount < 0) {
+                            totalExpenses += Math.abs(amount); // 支出为负值，取绝对值
+                        } else {
+                            totalIncome += amount; // 收入为正值
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return totalExpenses - totalIncome; // 净支出
+    }
+
+    // 获取本年总支出
+    private double getAnnualTotalExpenses(User user) {
+        LocalDate currentDate = LocalDate.now();
+        int currentYear = currentDate.getYear();
+        double totalExpenses = 0.0;
+        double totalIncome = 0.0;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(TRANSACTION_FILE))) {
+            String line;
+            br.readLine(); // 跳过标题行
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 6 && parts[0].equals(user.getUsername())) {
+                    LocalDate date = LocalDate.parse(parts[2]);
+                    double amount = Double.parseDouble(parts[3]);
+
+                    if (date.getYear() == currentYear) {
+                        if (amount < 0) {
+                            totalExpenses += Math.abs(amount); // 支出为负值，取绝对值
+                        } else {
+                            totalIncome += amount; // 收入为正值
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return totalExpenses - totalIncome; // 净支出
+    }
+
     // 检查 transactions.csv 文件的变化并更新 savedAmount 和 annualSavedAmount
     public void checkTransactionsFile() {
+        if (!isLoggedIn) { // 如果没有用户登录，直接返回
+            return;
+        }
+
         File file = new File(TRANSACTION_FILE);
         if (!file.exists()) {
             return;
@@ -332,36 +443,52 @@ public class UserManager {
 
         for (String line : newTransactions) {
             String[] parts = line.split(",");
-            if (parts.length >= 7 && parts[1].equals(currentUser.getUsername())) {
-                double amount = Double.parseDouble(parts[4]);
-                String dateStr = parts[3];
+            if (parts.length >= 6 && parts[0].equals(currentUser.getUsername())) {
+                double amount = Double.parseDouble(parts[3]);
+                String dateStr = parts[2];
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 LocalDate date = LocalDate.parse(dateStr, formatter);
 
                 if (date.getYear() == LocalDate.now().getYear()
                         && date.getMonthValue() == LocalDate.now().getMonthValue()) {
-                    newMonthlySpent += amount;
+                    if (amount < 0) {
+                        newMonthlySpent += Math.abs(amount); // 支出为负值，取绝对值
+                    } else {
+                        newMonthlySpent -= amount; // 收入为正值，从支出中减去
+                    }
                 }
                 if (date.getYear() == LocalDate.now().getYear()) {
-                    newYearlySpent += amount;
+                    if (amount < 0) {
+                        newYearlySpent += Math.abs(amount); // 支出为负值，取绝对值
+                    } else {
+                        newYearlySpent -= amount; // 收入为正值，从支出中减去
+                    }
                 }
             }
         }
 
         for (String line : removedTransactions) {
             String[] parts = line.split(",");
-            if (parts.length >= 7 && parts[1].equals(currentUser.getUsername())) {
-                double amount = Double.parseDouble(parts[4]);
-                String dateStr = parts[3];
+            if (parts.length >= 6 && parts[0].equals(currentUser.getUsername())) {
+                double amount = Double.parseDouble(parts[3]);
+                String dateStr = parts[2];
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 LocalDate date = LocalDate.parse(dateStr, formatter);
 
                 if (date.getYear() == LocalDate.now().getYear()
                         && date.getMonthValue() == LocalDate.now().getMonthValue()) {
-                    removedMonthlySpent += amount;
+                    if (amount < 0) {
+                        removedMonthlySpent += Math.abs(amount); // 支出为负值，取绝对值
+                    } else {
+                        removedMonthlySpent -= amount; // 收入为正值，从支出中减去
+                    }
                 }
                 if (date.getYear() == LocalDate.now().getYear()) {
-                    removedYearlySpent += amount;
+                    if (amount < 0) {
+                        removedYearlySpent += Math.abs(amount); // 支出为负值，取绝对值
+                    } else {
+                        removedYearlySpent -= amount; // 收入为正值，从支出中减去
+                    }
                 }
             }
         }
@@ -403,91 +530,6 @@ public class UserManager {
         }
     }
 
-//    public void checkMonthlyExpenses(User user) {
-//        String username = user.getUsername();
-//        double shoppingSpent = 0.0;
-//        double transportSpent = 0.0;
-//        double dietSpent = 0.0;
-//        double amusementSpent = 0.0;
-//        double totalSpent = 0.0;
-//
-//        try (BufferedReader br = new BufferedReader(new FileReader(TRANSACTION_FILE))) {
-//            String line;
-//            br.readLine(); // 跳过标题行
-//            while ((line = br.readLine()) != null) {
-//                String[] parts = line.split(",");
-//                if (parts.length >= 7 && parts[1].equals(username)) {
-//                    String dateStr = parts[3];
-//                    double amount = Double.parseDouble(parts[4]);
-//                    String category = parts[5];
-//
-//                    // 解析日期
-//                    // 先把所有"/"换成"-"，再用 yyyy-MM-dd 模式解析日期
-//                    String normalized = dateStr.trim().replace('/', '-');
-//                    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-//                    LocalDate date;
-//                    try {
-//                        date = LocalDate.parse(normalized, fmt);
-//                    } catch (DateTimeParseException ex) {
-//                        // 如果还是解析失败，就跳过这条记录
-//                        continue;
-//                    }
-//
-//                    // 检查是否为本月的交易
-//                    if (date.getYear() == LocalDate.now().getYear()
-//                            && date.getMonthValue() == LocalDate.now().getMonthValue()) {
-//                        switch (category.toLowerCase()) {
-//                            case "shopping":
-//                                shoppingSpent += amount;
-//                                break;
-//                            case "transport":
-//                                transportSpent += amount;
-//                                break;
-//                            case "diet":
-//                                dietSpent += amount;
-//                                break;
-//                            case "amusement":
-//                                amusementSpent += amount;
-//                                break;
-//                        }
-//                        totalSpent += amount;
-//                    }
-//                }
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//
-//        // 检查是否超过预算并发出警告
-//        if (shoppingSpent > user.getShoppingBudget()) {
-//            showAlert("Warning",
-//                    "Shopping budget exceeded: $" + shoppingSpent + " (Budget: $" + user.getShoppingBudget() + ")");
-//        }
-//        if (transportSpent > user.getTransportBudget()) {
-//            showAlert("Warning",
-//                    "Transport budget exceeded: $" + transportSpent + " (Budget: $" + user.getTransportBudget() + ")");
-//        }
-//        if (dietSpent > user.getDietBudget()) {
-//            showAlert("Warning", "Diet budget exceeded: $" + dietSpent + " (Budget: $" + user.getDietBudget() + ")");
-//        }
-//        if (amusementSpent > user.getAmusementBudget()) {
-//            showAlert("Warning",
-//                    "Amusement budget exceeded: $" + amusementSpent + " (Budget: $" + user.getAmusementBudget() + ")");
-//        }
-//        if (totalSpent > user.getMonthlyBudget()) {
-//            showAlert("Warning",
-//                    "Total monthly budget exceeded: $" + totalSpent + " (Budget: $" + user.getMonthlyBudget() + ")");
-//        }
-//    }
-
-//    private void showAlert(String title, String message) {
-//        Alert alert = new Alert(Alert.AlertType.WARNING);
-//        alert.setTitle(title);
-//        alert.setHeaderText(null);
-//        alert.setContentText(message);
-//        alert.showAndWait();
-//    }
-
     // 关闭定时任务
     public void shutdownScheduler() {
         if (scheduler != null) {
@@ -500,9 +542,53 @@ public class UserManager {
         User user = getUser(username);
         if (user != null) {
             user.setMonthlyBudget(newBudget);
+            // 重新分配各类消费预算
+            double budgetPerCategory = newBudget / 8;
+            user.setHousingBudget(budgetPerCategory);
+            user.setShoppingBudget(budgetPerCategory);
+            user.setFoodDiningBudget(budgetPerCategory);
+            user.setGiftsDonationsBudget(budgetPerCategory);
+            user.setTransportationBudget(budgetPerCategory);
+            user.setEntertainmentBudget(budgetPerCategory);
+            user.setPersonalCareBudget(budgetPerCategory);
+            user.setHealthcareBudget(budgetPerCategory);
+
             saveUserSettings(user);
             return true;
         }
         return false;
+    }
+
+    // 获取每种消费类型的本月总支出
+    public double getMonthlyExpensesByCategory(User user, String category) {
+        LocalDate currentDate = LocalDate.now();
+        int currentYear = currentDate.getYear();
+        int currentMonth = currentDate.getMonthValue();
+        double totalExpenses = 0.0;
+        double totalIncome = 0.0;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(TRANSACTION_FILE))) {
+            String line;
+            br.readLine(); // 跳过标题行
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 6 && parts[0].equals(user.getUsername()) && parts[4].equals(category)) {
+                    LocalDate date = LocalDate.parse(parts[2]);
+                    double amount = Double.parseDouble(parts[3]);
+
+                    if (date.getYear() == currentYear && date.getMonthValue() == currentMonth) {
+                        if (amount < 0) {
+                            totalExpenses += Math.abs(amount); // 支出为负值，取绝对值
+                        } else {
+                            totalIncome += amount; // 收入为正值
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return totalExpenses - totalIncome; // 净支出
     }
 }

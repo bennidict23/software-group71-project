@@ -1,42 +1,32 @@
-test,alipay,交易时间,金额,Uncategorized,交易分类商品说明
-test,alipay,2025-03-17,0.15,Uncategorized,生活服务企鹅共享
-test,alipay,2025-03-17,4.08,Uncategorized,日用百货综合商店_10021002503171116480694029612774_522165347022
-test,alipay,2025-03-16,4.67,Uncategorized,日用百货多点订单：870445043900
-test,alipay,2025-03-16,11.49,Uncategorized,交通出行高德打车订单
-test,alipay,2025-03-16,30.41,Uncategorized,交通出行高德打车订单
-test,alipay,2025-03-15,4.50,Uncategorized,生活服务企鹅共享
-test,alipay,2025-03-13,2.50,Uncategorized,其他无人售货·18252
-test,alipay,2025-03-13,2.85,Uncategorized,其他无人售货·18252
-test,alipay,2025-03-12,0.05,Uncategorized,生活服务企鹅共享
-test,alipay,2025-03-10,3.54,Uncategorized,日用百货综合商店_10021002503101120000704029617043_519108880312
-test,alipay,2025-03-09,0.05,Uncategorized,生活服务企鹅共享
-test,alipay,2025-03-09,0.12,Uncategorized,生活服务企鹅共享
-test,alipay,2025-03-09,0.06,Uncategorized,生活服务企鹅共享
-test,alipay,2025-03-09,7.12,Uncategorized,其他无人售货·18252
-test,alipay,2025-03-08,14.92,Uncategorized,交通出行高德打车订单
-test,alipay,2025-03-08,154.41,Uncategorized,信用借还花呗自动还款-2025年03月账单
-test,alipay,2025-03-06,5.60,Uncategorized,其他无人售货·18252
-test,alipay,2025-03-05,0.11,Uncategorized,生活服务企鹅共享
-test,alipay,2025-03-05,0.08,Uncategorized,生活服务企鹅共享
-test,alipay,2025-03-03,4.10,Uncategorized,日用百货综合商店_10021002503031121550744029616138_516186725022
-test,alipay,2025-03-02,0.08,Uncategorized,生活服务企鹅共享
-test,alipay,2025-03-01,0.05,Uncategorized,生活服务企鹅共享
-test,alipay,2025-02-28,2.85,Uncategorized,其他无人售货·18252
-test,alipay,2025-02-28,0.03,Uncategorized,生活服务企鹅共享
-test,alipay,2025-02-28,0.12,Uncategorized,生活服务企鹅共享
-test,alipay,2025-02-28,0.08,Uncategorized,生活服务企鹅共享
-test,alipay,2025-02-28,0.03,Uncategorized,生活服务企鹅共享
-test,alipay,2025-02-27,3.48,Uncategorized,日用百货综合商店_10021002502271733530494029616922_514595400932
-test,alipay,2025-02-26,0.05,Uncategorized,生活服务企鹅共享
-test,alipay,2025-02-26,4.50,Uncategorized,生活服务企鹅共享
-test,alipay,2025-02-25,0.05,Uncategorized,生活服务企鹅共享
-test,alipay,2025-02-24,0.04,Uncategorized,生活服务企鹅共享
-test,alipay,2025-02-23,0.03,Uncategorized,生活服务企鹅共享
-test,alipay,2025-02-22,0.05,Uncategorized,生活服务企鹅共享
-test,alipay,2025-02-22,0.07,Uncategorized,生活服务企鹅共享
-test,alipay,2025-02-21,4.36,Uncategorized,日用百货多点订单：863717115700
-test,alipay,2025-02-21,176.00,Uncategorized,日用百货飞利浦9600，国民hifi耳机，大耳代表作，9500升级款
-test,alipay,2025-02-20,0.06,Uncategorized,生活服务企鹅共享
-test,alipay,2025-02-19,0.05,Uncategorized,生活服务企鹅共享
-test,alipay,2025-02-19,0.12,Uncategorized,生活服务企鹅共享
-test,alipay,2025-02-19,0.04,Uncategorized,生活服务企鹅共享
+1,1234,Cash,2024-05-15,-85.50,Groceries,Weekly groceries
+2,1234,OCBC,2024-06-20,-120.00,Utilities,Electricity bill
+3,1234,PayNow,2024-08-10,-65.30,Transportation,Train monthly pass
+4,1234,Shopee,2024-10-25,-95.80,Shopping,Online shopping
+5,1234,Cash,2024-12-18,-120.00,Dining,Team lunch meeting
+6,1234,OCBC,2025-01-21,-89.90,Utilities,Electricity bill
+7,1234,PayNow,2025-01-07,500.00,Transfer,Friend repayment
+8,1234,Shopee,2025-01-15,-75.30,Shopping,Office supplies
+9,1234,Cash,2025-01-25,-45.50,Groceries,Weekly groceries
+10,1234,OCBC,2025-02-10,-65.00,Transportation,Train monthly pass
+11,1234,PayNow,2025-02-15,-95.80,Shopping,New clothes
+12,1234,Shopee,2025-02-20,-35.25,Entertainment,Movie tickets
+13,1234,Cash,2025-02-28,-55.00,Dining,Restaurant dinner
+14,1234,OCBC,2025-03-10,-42.75,Utilities,Phone bill
+15,1234,PayNow,2025-03-15,-75.50,Healthcare,Doctor visit
+16,1234,Shopee,2025-03-20,-128.80,Shopping,Electronics
+17,1234,Cash,2025-03-22,-38.90,Groceries,Fruits and vegetables
+18,1234,OCBC,2025-03-25,-65.00,Transportation,Gas refill
+19,1234,PayNow,2025-03-28,-45.50,Entertainment,Concert tickets
+20,1234,Shopee,2025-03-30,-95.75,Shopping,Gift shopping
+21,1234,Cash,2025-04-01,-62.30,Dining,Family dinner
+22,1234,OCBC,2025-04-05,-85.40,Utilities,Electricity and water
+23,1234,PayNow,2025-04-08,-110.50,Shopping,Household items
+24,1234,Shopee,2025-04-10,-48.75,Groceries,Weekly groceries
+25,1234,Cash,2025-04-12,-75.00,Entertainment,Weekend activities
+26,1234,OCBC,2025-04-15,-56.25,Transportation,Taxi rides
+27,1234,PayNow,2025-04-18,-42.80,Dining,Lunch meetings
+28,1234,Shopee,2025-04-20,-95.60,Healthcare,Gym membership
+29,1234,Cash,2024-11-23,-65.40,Groceries,Pantry restocking
+30,1234,OCBC,2024-11-25,-48.25,Utilities,Internet bill
+31,1234,PayNow,2024-12-27,-125.00,Shopping,Winter clothes
+32,1234,Shopee,2024-12-29,-80.50,Entertainment,Home streaming services

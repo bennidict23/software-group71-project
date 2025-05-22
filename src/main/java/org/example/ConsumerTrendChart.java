@@ -44,7 +44,7 @@ public class ConsumerTrendChart {
         for (Map.Entry<YearMonth, Double> e : monthly.entrySet()) {
             series.getData().add(new XYChart.Data<>(
                     e.getKey().format(fmt),
-                    e.getValue()
+                    -e.getValue()
             ));
         }
 
@@ -65,11 +65,11 @@ public class ConsumerTrendChart {
             String line = br.readLine();
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
-                if (parts.length < 7) continue;
+                if (parts.length < 6) continue; // 确保至少有 6 个字段
                 // 只统计本用户
-                if (!parts[1].equals(currentUser.getUsername())) continue;
+                if (!parts[0].equals(currentUser.getUsername())) continue;
                 // 解析日期
-                String raw = parts[3].replace('/', '-').trim();
+                String raw = parts[2].replace('/', '-').trim();
                 LocalDate date;
                 try {
                     date = LocalDate.parse(raw, DateTimeFormatter.ISO_LOCAL_DATE);
@@ -79,7 +79,7 @@ public class ConsumerTrendChart {
                 YearMonth ym = YearMonth.from(date);
                 // 只保留最近 6 个月 + 本月
                 if (ym.isBefore(sixMonthsAgo) || ym.isAfter(current)) continue;
-                double amt = Double.parseDouble(parts[4]);
+                double amt = Double.parseDouble(parts[3]);
                 monthlySpending.merge(ym, amt, Double::sum);
             }
         } catch (IOException e) {
@@ -94,5 +94,4 @@ public class ConsumerTrendChart {
         // 按月排序
         return new TreeMap<>(monthlySpending);
     }
-
 }

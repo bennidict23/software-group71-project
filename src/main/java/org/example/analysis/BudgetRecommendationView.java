@@ -1,5 +1,6 @@
 package org.example.analysis;
 
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -11,6 +12,7 @@ import javafx.stage.Stage;
 import org.example.DashboardView;
 import org.example.User;
 import org.example.UserManager;
+import org.example.utils.LoadingUtils;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -32,6 +34,7 @@ public class BudgetRecommendationView extends BorderPane {
     private Map<String, Double> recommendedBudgets = new HashMap<>();
 
     // UI组件
+    private StackPane rootPane;
     private VBox contentContainer;
     private TableView<BudgetItem> budgetTable;
     private ComboBox<String> periodSelector;
@@ -51,20 +54,18 @@ public class BudgetRecommendationView extends BorderPane {
         // 创建UI布局
         setupUI();
 
-        // 分析历史数据
-        analyzeHistoricalData();
-
-        // 生成预算建议
-        generateRecommendations();
-
-        // 显示预算建议
-        displayRecommendations();
+        // 加载数据（移至后台线程）
+        loadDataInBackground();
     }
 
     /**
      * 设置UI组件和布局
      */
     private void setupUI() {
+        // 创建根容器为StackPane，用于显示加载指示器
+        rootPane = new StackPane();
+        rootPane.setPadding(new Insets(0));
+
         // 创建标题
         Label titleLabel = new Label("Intelligent Budget Recommendations");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
@@ -93,7 +94,34 @@ public class BudgetRecommendationView extends BorderPane {
         VBox mainContainer = new VBox(15);
         mainContainer.getChildren().addAll(titleLabel, controlPanel, contentContainer, totalBudgetLabel,
                 explanationLabel);
-        this.setCenter(mainContainer);
+
+        // 将主容器添加到根容器
+        rootPane.getChildren().add(mainContainer);
+
+        // 设置根容器为当前BorderPane的中心
+        this.setCenter(rootPane);
+    }
+
+    /**
+     * 在后台线程中加载数据
+     */
+    private void loadDataInBackground() {
+        // 创建后台任务
+        Task<Void> loadDataTask = new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                // 执行耗时操作
+                analyzeHistoricalData();
+                generateRecommendations();
+                return null;
+            }
+        };
+
+        // 显示加载指示器并执行任务
+        LoadingUtils.showLoadingIndicator(rootPane, loadDataTask, result -> {
+            // 任务完成后的操作（在UI线程中执行）
+            displayRecommendations();
+        });
     }
 
     /**
@@ -123,7 +151,8 @@ public class BudgetRecommendationView extends BorderPane {
         System.out.println("交易文件路径: " + transactionFile.getAbsolutePath());
         System.out.println("文件是否存在: " + transactionFile.exists());
         System.out.println("当前用户: " + (currentUser != null ? currentUser.getUsername() : "null"));
-        System.out.println("开始日期: " + startDate);
+        System.out.println("分析数据的开始日期: " + startDate);
+        System.out.println("选定的数据周期: " + period);
 
         try {
             BufferedReader reader = new BufferedReader(new FileReader(transactionFile));
@@ -141,26 +170,32 @@ public class BudgetRecommendationView extends BorderPane {
 
             int lineCount = 0;
             int processedCount = 0;
+            int skippedCount = 0;
+            int dateFilteredCount = 0;
 
             String line;
             while ((line = reader.readLine()) != null) {
                 lineCount++;
                 String[] parts = line.split(",");
-                if (parts.length >= 7) {
+                if (parts.length >= 6) {
                     try {
-                        // 解析日期在索引3 (Date列)
-                        LocalDate date = LocalDate.parse(parts[3], formatter);
+                        // 解析日期在索引2 (Date列)
+                        LocalDate date = LocalDate.parse(parts[2], formatter);
 
                         // 只考虑选定时间范围内的数据
                         if (date.isBefore(startDate)) {
+                            dateFilteredCount++;
                             continue;
                         }
 
                         // 解析金额和类别
-                        // 金额在索引4 (Amount列)
-                        double amount = Double.parseDouble(parts[4]);
-                        // 类别在索引5 (Category列)
-                        String category = parts[5].trim();
+                        // 金额在索引3 (Amount列)
+                        double amount = Double.parseDouble(parts[3]);
+                        // 类别在索引4 (Category列)
+                        String category = parts[4].trim();
+
+                        System.out
+                                .println("处理第 " + lineCount + " 行: 日期=" + date + ", 金额=" + amount + ", 类别=" + category);
 
                         // 只考虑支出（负数金额）
                         if (amount < 0) {
@@ -173,18 +208,28 @@ public class BudgetRecommendationView extends BorderPane {
                             }
                             categoryExpenses.get(category).add(amount);
                             System.out.println("添加类别支出: " + category + " = " + amount);
+                        } else {
+                            System.out.println("跳过第 " + lineCount + " 行: 非支出交易 (金额不是负数)");
+                            skippedCount++;
                         }
                     } catch (Exception e) {
-                        System.out.println("解析第 " + lineCount + " 行出错: " + e.getMessage());
+                        System.out.println("解析第 " + lineCount + " 行出错: " + e.getMessage() + ", 原始数据: " + line);
+                        skippedCount++;
                         // 忽略解析错误的记录
                         continue;
                     }
+                } else {
+                    System.out.println("跳过第 " + lineCount + " 行: 列数不足 (需要至少6列), 实际列数: " + parts.length);
+                    skippedCount++;
                 }
             }
 
             reader.close();
 
-            System.out.println("处理完成。总共处理 " + processedCount + " 条支出记录");
+            System.out.println("处理完成。总行数: " + lineCount);
+            System.out.println("有效支出记录数: " + processedCount);
+            System.out.println("因日期范围被过滤的行数: " + dateFilteredCount);
+            System.out.println("被跳过的行数: " + skippedCount);
             System.out.println("支出类别数: " + categoryExpenses.size());
 
             // 计算每个类别的月均支出
@@ -206,8 +251,7 @@ public class BudgetRecommendationView extends BorderPane {
         } catch (Exception e) {
             System.err.println("分析历史数据出错: " + e.getMessage());
             e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "Data Analysis Error",
-                    "Could not analyze historical data: " + e.getMessage());
+            // 不在后台线程弹出UI提示，只记录错误
         }
     }
 
@@ -218,6 +262,8 @@ public class BudgetRecommendationView extends BorderPane {
         LocalDate now = LocalDate.now();
 
         switch (period) {
+            case "All Data":
+                return LocalDate.of(2000, 1, 1); // 返回一个非常早的日期，包含所有数据
             case "Last Month":
                 return now.minusMonths(1);
             case "Last 3 Months":
@@ -227,7 +273,7 @@ public class BudgetRecommendationView extends BorderPane {
             case "This Year":
                 return LocalDate.of(now.getYear(), 1, 1);
             default:
-                return now.minusMonths(6); // 默认为最近6个月
+                return LocalDate.of(2000, 1, 1); // 默认包含所有数据
         }
     }
 
@@ -236,6 +282,8 @@ public class BudgetRecommendationView extends BorderPane {
      */
     private int getMonthsFromPeriod(String period) {
         switch (period) {
+            case "All Data":
+                return 60; // 假设5年的跨度
             case "Last Month":
                 return 1;
             case "Last 3 Months":
@@ -245,7 +293,7 @@ public class BudgetRecommendationView extends BorderPane {
             case "This Year":
                 return LocalDate.now().getMonthValue();
             default:
-                return 6;
+                return 60; // 默认为5年
         }
     }
 
@@ -254,50 +302,54 @@ public class BudgetRecommendationView extends BorderPane {
      */
     private void generateRecommendations() {
         if (monthlyAverages.isEmpty()) {
+            recommendedBudgets = new HashMap<>();
             return;
         }
 
         boolean applySeasonalAdjustments = seasonalAdjustmentCheckbox.isSelected();
 
         // 使用AI服务生成预算建议
-        recommendedBudgets = AIModelService.getBudgetRecommendations(
-                monthlyAverages, applySeasonalAdjustments);
+        recommendedBudgets = AIModelService.getBudgetRecommendations(monthlyAverages, applySeasonalAdjustments);
 
         // 计算总预算
         totalBudget = 0.0;
         for (Double amount : recommendedBudgets.values()) {
             totalBudget += amount;
         }
+
+        // 更新总预算显示
+        updateTotalBudgetLabel();
     }
 
     /**
      * 显示预算建议
      */
     private void displayRecommendations() {
-        // 清空内容容器
-        contentContainer.getChildren().clear();
-
-        // 如果没有数据，显示提示信息
         if (monthlyAverages.isEmpty()) {
             showNoDataMessage();
             return;
         }
 
-        // 创建预算表格
+        // 更新预算表格
         createBudgetTable();
 
-        // 更新总预算标签
-        totalBudgetLabel.setText(String.format("Total Recommended Budget: ¥%.2f", totalBudget));
+        // 添加预算分析文本
+        addBudgetAnalysisText();
     }
 
     /**
      * 创建预算表格
      */
     private void createBudgetTable() {
+        // 清空内容容器
+        contentContainer.getChildren().clear();
+
         // 创建表格
         budgetTable = new TableView<>();
         budgetTable.setEditable(false);
-        budgetTable.setMinHeight(400);
+        budgetTable.setMinHeight(250); // 进一步减小表格的最小高度
+        budgetTable.setPrefHeight(250); // 设置首选高度
+        budgetTable.setMaxHeight(250); // 限制最大高度
 
         // 创建列
         TableColumn<BudgetItem, String> categoryColumn = new TableColumn<>("Category");
@@ -337,7 +389,53 @@ public class BudgetRecommendationView extends BorderPane {
         budgetTable.getItems().addAll(items);
 
         // 添加表格到容器
-        contentContainer.getChildren().add(budgetTable);
+        Label tableTitle = new Label("Recommended Budget Allocation");
+        tableTitle.setFont(Font.font("System", FontWeight.BOLD, 16));
+
+        VBox tableBox = new VBox(10, tableTitle, budgetTable);
+        tableBox.setPadding(new Insets(0, 0, 10, 0));
+        contentContainer.getChildren().add(tableBox);
+    }
+
+    /**
+     * 添加预算分析文本
+     */
+    private void addBudgetAnalysisText() {
+        // 从AIModelService获取分析文本
+        String analysisText = AIModelService.getLatestBudgetRecommendationAnalysis();
+
+        if (analysisText != null && !analysisText.isEmpty()) {
+            VBox analysisBox = new VBox(10);
+            analysisBox.setPadding(new Insets(10, 0, 0, 0));
+            analysisBox.setStyle(
+                    "-fx-background-color: #f5f9ff; -fx-border-color: #b8d0e8; -fx-border-radius: 5px; -fx-padding: 15px;");
+
+            Label analysisTitle = new Label("Budget Analysis and Recommendations:");
+            analysisTitle.setFont(Font.font("System", FontWeight.BOLD, 18));
+            analysisTitle.setStyle("-fx-text-fill: #2c5777;");
+
+            TextArea analysisArea = new TextArea(analysisText);
+            analysisArea.setEditable(false);
+            analysisArea.setWrapText(true);
+            analysisArea.setMaxWidth(Double.MAX_VALUE);
+            analysisArea.setPrefHeight(400); // 增加文本区域高度
+            analysisArea.setMinHeight(350); // 设置最小高度
+            analysisArea.setStyle(
+                    "-fx-background-color: #f8f8f8; -fx-border-color: #e0e0e0; -fx-font-size: 14px; -fx-control-inner-background: #ffffff;");
+
+            // 设置文本区域可以自由滚动
+            ScrollPane scrollPane = new ScrollPane(analysisArea);
+            scrollPane.setFitToWidth(true);
+            scrollPane.setMinHeight(350);
+            scrollPane.setPrefHeight(400);
+            scrollPane.setStyle("-fx-background-color: transparent; -fx-border-color: transparent;");
+
+            analysisBox.getChildren().addAll(analysisTitle, scrollPane);
+            analysisBox.setMaxWidth(Double.MAX_VALUE);
+            HBox.setHgrow(analysisBox, Priority.ALWAYS);
+
+            contentContainer.getChildren().add(analysisBox);
+        }
     }
 
     /**
@@ -376,9 +474,20 @@ public class BudgetRecommendationView extends BorderPane {
      * 刷新数据
      */
     private void refreshData() {
-        analyzeHistoricalData();
-        generateRecommendations();
-        displayRecommendations();
+        // 创建后台任务
+        Task<Void> refreshTask = new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                analyzeHistoricalData();
+                generateRecommendations();
+                return null;
+            }
+        };
+
+        // 显示加载指示器并执行任务
+        LoadingUtils.showLoadingIndicator(rootPane, refreshTask, result -> {
+            displayRecommendations();
+        });
     }
 
     /**
@@ -410,38 +519,46 @@ public class BudgetRecommendationView extends BorderPane {
      * 创建控制面板
      */
     private HBox createControlPanel() {
-        // 创建基于历史数据周期的选择器
-        Label basedOnLabel = new Label("Based on spending from:");
-        basedOnLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
+        HBox controlBox = new HBox(15);
+        controlBox.setAlignment(Pos.CENTER_LEFT);
+        controlBox.setPadding(new Insets(10));
 
+        // 创建历史数据周期选择器
+        Label periodLabel = new Label("Analysis Period:");
+        periodLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
+
+        // 初始化周期选择器
         periodSelector = new ComboBox<>();
-        periodSelector.getItems().addAll("Last Month", "Last 3 Months", "Last 6 Months", "This Year");
-        periodSelector.setValue("Last 6 Months");
+        periodSelector.getItems().addAll("All Data", "Last Month", "Last 3 Months", "Last 6 Months", "This Year");
+        periodSelector.setValue("All Data");
         periodSelector.setMinWidth(150);
         periodSelector.setOnAction(e -> refreshData());
 
-        // 季节性调整复选框
+        // 创建季节性调整选项
         seasonalAdjustmentCheckbox = new CheckBox("Apply Seasonal Adjustments");
         seasonalAdjustmentCheckbox.setSelected(true);
         seasonalAdjustmentCheckbox.setOnAction(e -> refreshData());
 
         // 刷新按钮
-        Button refreshButton = new Button("Refresh");
+        Button refreshButton = new Button("Refresh Data");
         refreshButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
         refreshButton.setOnAction(e -> refreshData());
 
-        // 应用推荐预算按钮
-        Button applyBudgetButton = new Button("Apply Recommended Budget");
-        applyBudgetButton.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white;");
-        applyBudgetButton.setOnAction(e -> applyRecommendedBudgets());
+        // 应用建议按钮
+        Button applyButton = new Button("Apply Recommendations");
+        applyButton.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white;");
+        applyButton.setOnAction(e -> applyRecommendedBudgets());
 
-        // 创建控制面板容器
-        HBox controlPanel = new HBox(15);
-        controlPanel.setAlignment(Pos.CENTER_LEFT);
-        controlPanel.getChildren().addAll(basedOnLabel, periodSelector, seasonalAdjustmentCheckbox, refreshButton,
-                applyBudgetButton);
+        controlBox.getChildren().addAll(periodLabel, periodSelector, seasonalAdjustmentCheckbox, refreshButton,
+                applyButton);
+        return controlBox;
+    }
 
-        return controlPanel;
+    /**
+     * 更新总预算标签
+     */
+    private void updateTotalBudgetLabel() {
+        totalBudgetLabel.setText(String.format("Total Recommended Budget: ¥%.2f", totalBudget));
     }
 
     /**

@@ -1,6 +1,7 @@
 package org.example.analysis;
 
 import javafx.application.Application;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -10,6 +11,7 @@ import javafx.stage.Stage;
 import org.example.DashboardView;
 import org.example.User;
 import org.example.analysis.BudgetRecommendationView;
+import org.example.utils.LoadingUtils;
 
 /**
  * AnalysisView类 - 数据分析页面
@@ -20,6 +22,7 @@ public class AnalysisView extends Application {
     private static final int HEIGHT = 800;
 
     private BorderPane mainContainer;
+    private StackPane contentContainer;
     private User currentUser;
     private Button spendingStructureBtn;
     private Button spendingForecastBtn;
@@ -55,84 +58,81 @@ public class AnalysisView extends Application {
      * 设置UI组件和布局
      */
     private void setupUI() {
-        // 创建顶部导航栏
-        HBox topBar = createTopBar();
-        mainContainer.setTop(topBar);
+        // 创建内容容器为StackPane，支持加载指示器叠加
+        contentContainer = new StackPane();
+        contentContainer.setPadding(new Insets(20));
+
+        // 显示欢迎屏幕
+        showWelcomeScreen();
 
         // 创建左侧菜单
-        VBox leftMenu = createLeftMenu();
-        mainContainer.setLeft(leftMenu);
+        VBox menuPanel = createMenuPanel();
+        menuPanel.setPrefWidth(250);
+        menuPanel.setStyle("-fx-background-color: #f5f5f5; -fx-padding: 15px;");
 
-        // 初始显示欢迎界面
-        showWelcomeScreen();
+        // 设置布局
+        mainContainer.setLeft(menuPanel);
+        mainContainer.setCenter(contentContainer);
     }
 
     /**
-     * 创建顶部导航栏
+     * 创建左侧菜单面板
      */
-    private HBox createTopBar() {
-        HBox topBar = new HBox(10);
-        topBar.setPadding(new Insets(10));
-        topBar.setStyle("-fx-background-color: #f8f8f8; -fx-border-color: #e0e0e0; -fx-border-width: 0 0 1 0;");
+    private VBox createMenuPanel() {
+        VBox menuPanel = new VBox(15);
+        menuPanel.setPadding(new Insets(20));
+        menuPanel.setStyle("-fx-background-color: #eaeaea;");
 
-        // 标题
-        Label titleLabel = new Label("Financial Analysis");
+        // 添加标题
+        Label titleLabel = new Label("Analysis Tools");
         titleLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        menuPanel.getChildren().add(titleLabel);
 
-        // 填充空间
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
+        // 创建菜单按钮
+        spendingStructureBtn = createMenuButton("Spending Structure", e -> showSpendingStructure());
+        spendingForecastBtn = createMenuButton("AI Spending Forecast", e -> showSpendingForecast());
+        budgetRecommendationBtn = createMenuButton("Budget Recommendations", e -> showBudgetRecommendation());
 
-        // 用户信息
-        Label userLabel = new Label("User: " + (currentUser != null ? currentUser.getUsername() : "Guest"));
-
-        // 返回按钮 - 改为绿色小按钮
-        Button backButton = new Button("Dashboard");
+        // 返回按钮
+        Button backButton = createMenuButton("Return to Dashboard", e -> returnToDashboard());
         backButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
-        backButton.setOnAction(e -> returnToDashboard());
 
-        // 添加组件到顶部栏
-        topBar.getChildren().addAll(titleLabel, spacer, userLabel, backButton);
-        return topBar;
-    }
-
-    /**
-     * 创建左侧菜单
-     */
-    private VBox createLeftMenu() {
-        VBox menu = new VBox(10);
-        menu.setPadding(new Insets(10));
-        menu.setPrefWidth(200);
-        menu.setStyle("-fx-background-color: #f0f0f0;");
-
-        // 菜单标题
-        Label menuLabel = new Label("Analysis Options");
-        menuLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
-        menuLabel.setPadding(new Insets(0, 0, 10, 0));
-
-        // 支出结构可视化按钮
-        spendingStructureBtn = new Button("Spending Structure");
-        spendingStructureBtn.setMaxWidth(Double.MAX_VALUE);
-        spendingStructureBtn.setOnAction(e -> showSpendingStructure());
-
-        // AI支出预测按钮
-        spendingForecastBtn = new Button("AI Spending Forecast");
-        spendingForecastBtn.setMaxWidth(Double.MAX_VALUE);
-        spendingForecastBtn.setOnAction(e -> showSpendingForecast());
-
-        // 智能预算推荐按钮
-        budgetRecommendationBtn = new Button("Budget Recommendation");
-        budgetRecommendationBtn.setMaxWidth(Double.MAX_VALUE);
-        budgetRecommendationBtn.setOnAction(e -> showBudgetRecommendation());
-
-        // 添加到菜单
-        menu.getChildren().addAll(
-                menuLabel,
+        // 添加按钮到面板
+        menuPanel.getChildren().addAll(
+                new Separator(),
                 spendingStructureBtn,
                 spendingForecastBtn,
-                budgetRecommendationBtn);
+                budgetRecommendationBtn,
+                new Separator(),
+                backButton);
 
-        return menu;
+        return menuPanel;
+    }
+
+    /**
+     * 创建菜单按钮
+     */
+    private Button createMenuButton(String text, javafx.event.EventHandler<javafx.event.ActionEvent> handler) {
+        Button button = new Button(text);
+        button.setMaxWidth(Double.MAX_VALUE);
+        button.setPrefHeight(40);
+        button.setAlignment(Pos.CENTER_LEFT);
+        button.setStyle("-fx-font-size: 14px;");
+        button.setOnAction(handler);
+        return button;
+    }
+
+    /**
+     * 高亮选中的按钮
+     */
+    private void highlightSelectedButton(Button selectedButton) {
+        // 重置所有按钮样式
+        spendingStructureBtn.setStyle("-fx-font-size: 14px;");
+        spendingForecastBtn.setStyle("-fx-font-size: 14px;");
+        budgetRecommendationBtn.setStyle("-fx-font-size: 14px;");
+
+        // 高亮选中的按钮
+        selectedButton.setStyle("-fx-font-size: 14px; -fx-background-color: #d0d8e0; -fx-font-weight: bold;");
     }
 
     /**
@@ -150,7 +150,10 @@ public class AnalysisView extends Application {
         instructionLabel.setStyle("-fx-font-size: 16px;");
 
         welcomeBox.getChildren().addAll(welcomeLabel, instructionLabel);
-        mainContainer.setCenter(welcomeBox);
+
+        // 清除现有内容并显示欢迎屏幕
+        contentContainer.getChildren().clear();
+        contentContainer.getChildren().add(welcomeBox);
     }
 
     /**
@@ -173,11 +176,24 @@ public class AnalysisView extends Application {
                 return;
             }
 
-            // 创建支出结构饼图
-            SpendingStructureChart chart = new SpendingStructureChart(currentUser);
+            // 创建加载任务
+            Task<SpendingStructureChart> loadTask = new Task<>() {
+                @Override
+                protected SpendingStructureChart call() throws Exception {
+                    // 在后台线程中创建支出结构饼图
+                    return new SpendingStructureChart(currentUser);
+                }
+            };
 
-            // 设置到主容器
-            mainContainer.setCenter(chart);
+            // 清除现有内容
+            contentContainer.getChildren().clear();
+
+            // 显示加载指示器并执行任务
+            LoadingUtils.showLoadingIndicator(contentContainer, loadTask, chart -> {
+                // 设置到主容器
+                contentContainer.getChildren().add(chart);
+            });
+
         } catch (Exception e) {
             e.printStackTrace();
             showAlert("Error", "Failed to display spending structure: " + e.getMessage());
@@ -191,6 +207,9 @@ public class AnalysisView extends Application {
         // 高亮选中的按钮
         highlightSelectedButton(spendingForecastBtn);
 
+        System.out.println("显示AI支出预测");
+        System.out.println("当前用户: " + (currentUser != null ? currentUser.getUsername() : "null"));
+
         try {
             if (currentUser == null) {
                 Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -201,11 +220,24 @@ public class AnalysisView extends Application {
                 return;
             }
 
-            // 创建AI支出预测视图
-            SpendingForecastView forecastView = new SpendingForecastView(currentUser);
+            // 创建加载任务
+            Task<SpendingForecastView> loadTask = new Task<>() {
+                @Override
+                protected SpendingForecastView call() throws Exception {
+                    // 在后台线程中创建支出预测视图
+                    return new SpendingForecastView(currentUser);
+                }
+            };
 
-            // 设置到主容器
-            mainContainer.setCenter(forecastView);
+            // 清除现有内容
+            contentContainer.getChildren().clear();
+
+            // 显示加载指示器并执行任务
+            LoadingUtils.showLoadingIndicator(contentContainer, loadTask, forecastView -> {
+                // 设置到主容器
+                contentContainer.getChildren().add(forecastView);
+            });
+
         } catch (Exception e) {
             e.printStackTrace();
             showAlert("Error", "Failed to display spending forecast: " + e.getMessage());
@@ -219,51 +251,61 @@ public class AnalysisView extends Application {
         // 高亮选中的按钮
         highlightSelectedButton(budgetRecommendationBtn);
 
-        try {
-            // 创建智能预算推荐视图
-            BudgetRecommendationView recommendationView = new BudgetRecommendationView();
+        System.out.println("显示智能预算推荐");
+        System.out.println("当前用户: " + (currentUser != null ? currentUser.getUsername() : "null"));
 
-            // 设置到主容器
-            mainContainer.setCenter(recommendationView);
+        try {
+            if (currentUser == null) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Error");
+                alert.setHeaderText(null);
+                alert.setContentText("No user logged in");
+                alert.showAndWait();
+                return;
+            }
+
+            // 创建加载任务
+            Task<BudgetRecommendationView> loadTask = new Task<>() {
+                @Override
+                protected BudgetRecommendationView call() throws Exception {
+                    // 在后台线程中创建预算推荐视图
+                    return new BudgetRecommendationView();
+                }
+            };
+
+            // 清除现有内容
+            contentContainer.getChildren().clear();
+
+            // 显示加载指示器并执行任务
+            LoadingUtils.showLoadingIndicator(contentContainer, loadTask, recommendationView -> {
+                // 设置到主容器
+                contentContainer.getChildren().add(recommendationView);
+            });
+
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Error", "Failed to display budget recommendation: " + e.getMessage());
+            showAlert("Error", "Failed to display budget recommendations: " + e.getMessage());
         }
     }
 
     /**
-     * 高亮选中的按钮
-     */
-    private void highlightSelectedButton(Button selectedButton) {
-        // 重置所有按钮样式
-        spendingStructureBtn.setStyle("-fx-background-color: #f0f0f0;");
-        spendingForecastBtn.setStyle("-fx-background-color: #f0f0f0;");
-        budgetRecommendationBtn.setStyle("-fx-background-color: #f0f0f0;");
-
-        // 设置选中按钮的样式
-        selectedButton.setStyle("-fx-background-color: #c0d9e7; -fx-font-weight: bold;");
-    }
-
-    /**
-     * 返回到仪表盘
+     * 返回仪表盘
      */
     private void returnToDashboard() {
-        // 关闭当前窗口
         Stage currentStage = (Stage) mainContainer.getScene().getWindow();
         currentStage.close();
 
-        // 打开仪表盘
         try {
-            DashboardView dashboardView = new DashboardView();
-            dashboardView.start(new Stage());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            showAlert("Error", "Failed to return to dashboard: " + ex.getMessage());
+            DashboardView dashboard = new DashboardView();
+            dashboard.start(new Stage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Error", "Failed to return to dashboard: " + e.getMessage());
         }
     }
 
     /**
-     * 显示警告/错误信息
+     * 显示提示对话框
      */
     private void showAlert(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -273,9 +315,6 @@ public class AnalysisView extends Application {
         alert.showAndWait();
     }
 
-    /**
-     * 主方法，用于单独运行此视图
-     */
     public static void main(String[] args) {
         launch(args);
     }
