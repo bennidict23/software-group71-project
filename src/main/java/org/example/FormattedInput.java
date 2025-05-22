@@ -231,7 +231,7 @@ public class FormattedInput extends Application {
 
             // 创建 Transaction 对象
             Transaction transaction = new Transaction(
-                    nextId.getAndIncrement(),
+                    (int)nextId.getAndIncrement(),
                     DashboardView.getCurrentUser().getUsername(),
                     "manual",
                     datePicker.getValue(),
@@ -451,7 +451,7 @@ public class FormattedInput extends Application {
                         String category = rowData.length > 4 ? rowData[4].trim() : "Uncategorized";
                         String description = rowData.length > 5 ? rowData[5].trim() : "";
 
-                        Transaction transaction = new Transaction(id, user, source, date, amount, category, description);
+                        Transaction transaction = new Transaction((int)id, user, source, date, amount, category, description);
                         data.add(transaction);
                         recordsImported++;
                     } catch (Exception e) {
