@@ -1,191 +1,330 @@
 package org.example;
 
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.PieChart;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
+import org.example.analysis.SpendingStructureChart;
+import org.example.dataImport.DataImportController;
+import org.example.list.TransactionViewer;
+import org.example.analysis.AnalysisView;
+
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class DashboardView extends Application {
 
-    // 静态变量存储当前用户的信息，由登录页面设置
-    private static User currentUser;
-    // 创建 UserManager 实例，用于操作 CSV 文件（用于修改密码等操作）
+    // 当前登录用户，静态变量，方便在类的其他方法中访问
+    public static User currentUser;
+    // 用户管理对象，用于处理用户相关操作
     private UserManager userManager = new UserManager();
 
-    // 默认本月预算、存钱目标（target）和当前存款金额（实际存款）
-    private double monthlyBudget = 4000.0;
-    private double savingsGoal = 5000.0;
-    private double savedAmount = 1500.0;
-
-    // 用于显示信息的控件
+    // 界面中的一些组件，用于展示和操作用户信息
     private Label passwordLabel;
     private Label budgetLabel;
     private Label goalLabel;
-    private ProgressBar progressBar;
-    private Label progressLabel;
 
-    // 登录时调用该方法设置当前用户
+    // 页面选择下拉框，用于切换不同的功能页面
+    private ComboBox<String> pageSelector;
+
+    // 标记是否已导入过数据
+    private static boolean importDone = false;
+
+    /** 由外部（DataImport）调用，标记已导入数据 */
+    public static void setImportDone(boolean done) {
+        importDone = done;
+    }
+
+    // DataImport控制器对象，用于处理数据导入相关操作
+    private DataImportController dataImportController = null;
+    // 用于显示消费趋势的折线图
+    private LineChart<String, Number> lineChart;
+    // 定时任务，用于定期更新 savedAmount 和 annualSavedAmount
+    private ScheduledExecutorService scheduler;
+
+    /**
+     * 设置当前用户，静态方法，方便从外部设置当前登录用户。
+     *
+     * @param user 当前登录用户
+     */
     public static void setCurrentUser(User user) {
         currentUser = user;
     }
 
+    /**
+     * 获取当前用户，静态方法，方便在类的其他方法中获取当前登录用户。
+     *
+     * @return 当前登录用户
+     */
+    public static User getCurrentUser() {
+        return currentUser;
+    }
+
+    /**
+     * 启动仪表盘界面。
+     *
+     * @param primaryStage 主舞台
+     * @throws Exception 异常
+     */
     @Override
     public void start(Stage primaryStage) throws Exception {
+        // 如果当前用户为空，说明未登录，跳转到登录界面
+        if (currentUser == null) {
+            LoginFrame loginFrame = new LoginFrame();
+            Stage loginStage = new Stage();
+            try {
+                loginFrame.start(loginStage);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            primaryStage.close();
+            return;
+        }
+
+        // 检查并重置月储蓄目标和月预算，确保数据的准确性
+        userManager.checkAndResetMonthlySettings(currentUser);
+
         primaryStage.setTitle("User Dashboard");
 
-        // 顶部标题
+        // 初始化页面选择下拉框，添加页面选项，并设置页面切换逻辑
+        pageSelector = new ComboBox<>();
+        pageSelector.getItems().addAll("Dashboard", "Data Import", "Transaction Viewer", "Analysis", "Set Goal", "Set Budget", "Change Password");
+        pageSelector.setPromptText("Select a page...");
+        pageSelector.setOnAction(e -> {
+            String selectedPage = pageSelector.getValue();
+            if (selectedPage == null || selectedPage.isEmpty()) {
+                return;
+            }
+            if ("Dashboard".equals(selectedPage)) {
+                showDashboard(primaryStage);
+            } else if ("Data Import".equals(selectedPage)) {
+                try {
+                    // 创建新的DataImportController实例并显示
+                    String username = (currentUser != null) ? currentUser.getUsername() : "default_user";
+                    dataImportController = new DataImportController(primaryStage, username);
+                    dataImportController.show();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    showAlert(Alert.AlertType.ERROR, "Error", "Failed to open Data Import page: " + ex.getMessage());
+                }
+            } else if ("Transaction Viewer".equals(selectedPage)) {
+                try {
+                    TransactionViewer transactionViewer = new TransactionViewer();
+                    transactionViewer.start(primaryStage);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            } else if ("Analysis".equals(selectedPage)) {
+                try {
+                    new AnalysisView().start(primaryStage);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    showAlert(Alert.AlertType.ERROR, "Error", "Failed to open Analysis page: " + ex.getMessage());
+                }
+            } else if ("Set Goal".equals(selectedPage)) {
+                GoalSettingsView goalSettingsView = new GoalSettingsView(currentUser, userManager);
+                goalSettingsView.showGoalSettings(primaryStage);
+            } else if ("Set Budget".equals(selectedPage)) {
+                BudgetSettingsView budgetSettingsView = new BudgetSettingsView(currentUser, userManager);
+                budgetSettingsView.showBudgetSettings(primaryStage);
+            } else if ("Change Password".equals(selectedPage)) {
+                ChangePasswordView changePasswordView = new ChangePasswordView(currentUser, userManager, primaryStage);
+                changePasswordView.start(new Stage()); // 创建并显示 ChangePasswordView
+            }
+            pageSelector.setValue(selectedPage);
+        });
+
+        // 默认显示 Dashboard 页面
+        showDashboard(primaryStage);
+
+        primaryStage.show();
+
+        // 启动定时任务，每5秒更新一次 savedAmount 和 annualSavedAmount
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler.scheduleAtFixedRate(this::updateSavedAmounts, 0, 5, TimeUnit.SECONDS);
+        // 启动定时任务，每5秒更新一次图表
+        scheduler.scheduleAtFixedRate(this::updateChart, 0, 5, TimeUnit.SECONDS);
+    }
+
+    private void showDashboard(Stage primaryStage) {
+        // 创建导航栏布局，包含页面选择下拉框
+        HBox navigationBox = new HBox(pageSelector);
+        navigationBox.setAlignment(Pos.TOP_CENTER);
+        // 减少导航栏内边距
+        navigationBox.setPadding(new Insets(5));
+
+        // 创建标题标签
         Label titleLabel = new Label("Dashboard");
         titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
 
-        // 显示本月预算
-        budgetLabel = new Label("Monthly Budget: $" + monthlyBudget);
-        // 显示存钱目标
-        goalLabel = new Label("Savings Goal: $" + savingsGoal);
-        // 显示存钱进度（progress = 当前存款 / 存钱目标）
-        progressBar = new ProgressBar(savedAmount / savingsGoal);
-        progressLabel = new Label("Savings Progress: " + (int)(savedAmount / savingsGoal * 100)
-                + "% (" + savedAmount + " saved)");
-        VBox budgetBox = new VBox(10, budgetLabel, goalLabel, progressBar, progressLabel);
-        budgetBox.setPadding(new Insets(10));
-        budgetBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+        // 创建新的框
+        VBox newBox = new VBox();
+        newBox.setAlignment(Pos.CENTER);
+        newBox.setPadding(new Insets(10));
+        newBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+        // 增大高度
+        newBox.setPrefHeight(250);
+        HBox.setHgrow(newBox, Priority.ALWAYS);
 
-        // 显示用户个人信息：账户和密码
-        Label accountLabel = new Label("Account: "
-                + (currentUser != null ? currentUser.getUsername() : "N/A"));
-        passwordLabel = new Label("Password: "
-                + (currentUser != null ? currentUser.getPassword() : "N/A"));
-        Button btnChangePassword = new Button("Change Password");
-        btnChangePassword.setOnAction(e -> showChangePasswordDialog(primaryStage));
-        VBox personalInfoBox = new VBox(10, accountLabel, passwordLabel, btnChangePassword);
-        personalInfoBox.setPadding(new Insets(10));
-        personalInfoBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+        // 创建储蓄金额和剩余预算标签
+        Label savedAmountLabel = new Label("Saved Amount: $" + (currentUser != null ? currentUser.getSavedAmount() : "N/A"));
+        Label remainingBudgetLabel = new Label("Remaining Budget: $" + (currentUser != null ? calculateRemainingBudget(currentUser) : "N/A"));
 
-        // 添加设置预算和目标的按钮
-        Button btnSetBudgetGoal = new Button("Set Budget & Goal");
-        btnSetBudgetGoal.setOnAction(e -> showBudgetGoalDialog(primaryStage));
+        // 设置标签样式
+        savedAmountLabel.setStyle("-fx-font-size: 16px; -fx-padding: 10px;");
+        remainingBudgetLabel.setStyle("-fx-font-size: 16px; -fx-padding: 10px;");
 
-        // 主布局
-        VBox mainLayout = new VBox(20, titleLabel, budgetBox, personalInfoBox, btnSetBudgetGoal);
+        // 将标签添加到 newBox 中
+        newBox.getChildren().addAll(savedAmountLabel, remainingBudgetLabel);
+
+        // 创建另一个 VBox
+        VBox anotherBox = new VBox();
+        anotherBox.setAlignment(Pos.CENTER);
+        anotherBox.setPadding(new Insets(10));
+        anotherBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+        // 增大高度
+        anotherBox.setPrefHeight(250);
+        HBox.setHgrow(anotherBox, Priority.ALWAYS);
+
+        // 创建饼状图
+        PieChart pieChart = createPieChart();
+        anotherBox.getChildren().add(pieChart);
+
+        // 将 newBox 和 anotherBox 组合到一个 HBox 中
+        HBox sideBySideBox = new HBox(10, newBox, anotherBox);
+        sideBySideBox.setAlignment(Pos.CENTER);
+        sideBySideBox.setMaxWidth(Double.MAX_VALUE);
+
+        // 创建 LineChart
+        lineChart = new ConsumerTrendChart(currentUser).createChart();
+
+        // 创建 StackPane 并添加 LineChart
+        StackPane chartPane = new StackPane();
+        chartPane.getChildren().add(lineChart);
+        chartPane.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+
+        // 检查是否有交易记录，如果有则显示图表
+        try (BufferedReader br = new BufferedReader(new FileReader("transactions.csv"))) {
+            // 跳过表头
+            String line = br.readLine();
+            if ((line = br.readLine()) != null) {
+                importDone = true;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        chartPane.setVisible(importDone);
+        chartPane.managedProperty().bind(chartPane.visibleProperty());
+
+        // 将图表添加到消费趋势区域
+        VBox imageBox = new VBox(10, new Label("Consumer Trend"), chartPane);
+        imageBox.setAlignment(Pos.TOP_CENTER);
+        imageBox.setPadding(new Insets(10));
+        imageBox.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
+        imageBox.setPrefSize(620, 300);
+
+        // 将各个区域组合到主布局中
+        VBox mainLayout = new VBox(15, titleLabel, navigationBox, sideBySideBox, imageBox); // 缩小间距
         mainLayout.setAlignment(Pos.CENTER);
         mainLayout.setPadding(new Insets(20));
 
-        Scene scene = new Scene(mainLayout, 500, 500);
+        // 创建场景并设置到主舞台
+        Scene scene = new Scene(mainLayout, 1000, 800);
         primaryStage.setScene(scene);
-        primaryStage.show();
     }
 
-    // 弹出修改密码的对话框，并同步更新 CSV 文件
-    private void showChangePasswordDialog(Stage owner) {
-        Stage dialog = new Stage();
-        dialog.setTitle("Change Password");
-        dialog.initOwner(owner);
+    private PieChart createPieChart() {
+        // 创建 SpendingStructureChart 实例以获取数据
+        SpendingStructureChart spendingStructureChart = new SpendingStructureChart(currentUser);
+        // 加载数据
+        spendingStructureChart.loadTransactionData();
 
-        GridPane grid = new GridPane();
-        grid.setPadding(new Insets(10));
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setAlignment(Pos.CENTER);
+        // 获取数据
+        Map<String, Double> categoryTotals = spendingStructureChart.getCategoryTotals();
+        double totalSpending = spendingStructureChart.getTotalSpending();
 
-        Label newPassLabel = new Label("New Password:");
-        PasswordField newPassField = new PasswordField();
+        // 创建饼图数据集
+        ObservableList<PieChart.Data> pieChartData = FXCollections.observableArrayList();
 
-        Label confirmPassLabel = new Label("Confirm Password:");
-        PasswordField confirmPassField = new PasswordField();
+        // 添加数据
+        for (Map.Entry<String, Double> entry : categoryTotals.entrySet()) {
+            String category = entry.getKey();
+            double amount = entry.getValue();
+            pieChartData.add(new PieChart.Data(category, amount));
+        }
 
-        Button btnSubmit = new Button("Submit");
+        // 创建饼图
+        PieChart pieChart = new PieChart(pieChartData);
+        pieChart.setTitle("Spending by Category in Last 3 Weeks");
+        pieChart.setTitleSide(javafx.geometry.Side.TOP);
+        pieChart.setLegendSide(javafx.geometry.Side.BOTTOM);
+        pieChart.setLabelsVisible(true);
+        pieChart.setLabelLineLength(20);
+        pieChart.setStartAngle(90);
+        pieChart.setAnimated(true);
+        pieChart.setMinSize(200, 200);
+        pieChart.setClockwise(false);
 
-        grid.add(newPassLabel, 0, 0);
-        grid.add(newPassField, 1, 0);
-        grid.add(confirmPassLabel, 0, 1);
-        grid.add(confirmPassField, 1, 1);
-        grid.add(btnSubmit, 1, 2);
+        return pieChart;
+    }
 
-        btnSubmit.setOnAction(e -> {
-            String newPass = newPassField.getText();
-            String confirmPass = confirmPassField.getText();
-            if (newPass.isEmpty() || confirmPass.isEmpty()) {
-                showAlert(Alert.AlertType.ERROR, "Error", "Fields cannot be empty.");
-            } else if (!newPass.equals(confirmPass)) {
-                showAlert(Alert.AlertType.ERROR, "Error", "Passwords do not match.");
-            } else {
-                // 调用 userManager 更新 CSV 文件中对应的用户密码
-                boolean syncResult = userManager.updateUserPassword(currentUser.getUsername(), newPass);
-                if (syncResult) {
-                    // 同步成功后更新当前用户对象和界面显示
-                    currentUser.setPassword(newPass);
-                    passwordLabel.setText("Password: " + newPass);
-                    showAlert(Alert.AlertType.INFORMATION, "Success", "Password updated successfully.");
-                    dialog.close();
-                } else {
-                    showAlert(Alert.AlertType.ERROR, "Error", "Failed to update password in file.");
-                }
-            }
+    private void updateChart() {
+        // 调用 UserManager 的 checkTransactionsFile 方法检测文件变化
+        userManager.checkTransactionsFile();
+
+        // 更新图表数据
+        Platform.runLater(() -> {
+            // 清空旧数据
+            lineChart.getData().clear();
+
+            // 重新计算并添加新数据
+            LineChart<String, Number> newChart = new ConsumerTrendChart(currentUser).createChart();
+            lineChart.getData().addAll(newChart.getData());
         });
-
-        Scene scene = new Scene(grid, 300, 200);
-        dialog.setScene(scene);
-        dialog.show();
     }
 
-    // 弹出设置预算和存钱目标的对话框
-    private void showBudgetGoalDialog(Stage owner) {
-        Stage dialog = new Stage();
-        dialog.setTitle("Set Budget & Goal");
-        dialog.initOwner(owner);
-
-        GridPane grid = new GridPane();
-        grid.setPadding(new Insets(10));
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setAlignment(Pos.CENTER);
-
-        Label budgetInputLabel = new Label("Monthly Budget:");
-        TextField budgetField = new TextField(String.valueOf(monthlyBudget));
-
-        Label goalInputLabel = new Label("Savings Goal:");
-        TextField goalField = new TextField(String.valueOf(savingsGoal));
-
-        Button btnSubmit = new Button("Submit");
-
-        grid.add(budgetInputLabel, 0, 0);
-        grid.add(budgetField, 1, 0);
-        grid.add(goalInputLabel, 0, 1);
-        grid.add(goalField, 1, 1);
-        grid.add(btnSubmit, 1, 2);
-
-        btnSubmit.setOnAction(e -> {
-            try {
-                double newBudget = Double.parseDouble(budgetField.getText());
-                double newGoal = Double.parseDouble(goalField.getText());
-                if (newBudget <= 0 || newGoal <= 0) {
-                    showAlert(Alert.AlertType.ERROR, "Error", "Values must be positive.");
-                    return;
-                }
-                // 更新变量
-                monthlyBudget = newBudget;
-                savingsGoal = newGoal;
-                // 更新界面显示：预算、目标与存钱进度
-                budgetLabel.setText("Monthly Budget: $" + monthlyBudget);
-                goalLabel.setText("Savings Goal: $" + savingsGoal);
-                progressBar.setProgress(savedAmount / savingsGoal);
-                progressLabel.setText("Savings Progress: " + (int)(savedAmount / savingsGoal * 100)
-                        + "% (" + savedAmount + " saved)");
-                showAlert(Alert.AlertType.INFORMATION, "Success", "Budget and Goal updated.");
-                dialog.close();
-            } catch (NumberFormatException ex) {
-                showAlert(Alert.AlertType.ERROR, "Error", "Please enter valid numbers.");
-            }
-        });
-
-        Scene scene = new Scene(grid, 300, 200);
-        dialog.setScene(scene);
-        dialog.show();
+    /**
+     * 更新 savedAmount 和 annualSavedAmount，并刷新界面显示。
+     */
+    private void updateSavedAmounts() {
+        // 调用 UserManager 的 checkTransactionsFile 方法更新 savedAmount 和 annualSavedAmount
+        userManager.checkTransactionsFile();
     }
 
-    // 简单的弹窗方法
+    private double calculateRemainingBudget(User user) {
+        if (user == null) {
+            return 0.0;
+        }
+        // 获取本月总预算
+        double monthlyBudget = user.getMonthlyBudget();
+        // 获取本月净支出
+        double monthlyExpenses = userManager.getMonthlyTotalExpenses(user);
+        // 剩余预算 = 本月总预算 - 本月净支出
+        return monthlyBudget - monthlyExpenses;
+    }
+
+    /**
+     * 显示提示对话框。
+     *
+     * @param type    对话框类型
+     * @param title   对话框标题
+     * @param message 对话框内容
+     */
     private void showAlert(Alert.AlertType type, String title, String message) {
         Alert alert = new Alert(type);
         alert.setTitle(title);
@@ -193,7 +332,39 @@ public class DashboardView extends Application {
         alert.setContentText(message);
         alert.showAndWait();
     }
+
+    /**
+     * 用户登出逻辑。
+     *
+     * @param primaryStage 主舞台
+     */
+    private void logout(Stage primaryStage) {
+        // 停止定时任务
+        if (scheduler != null) {
+            scheduler.shutdownNow();
+        }
+        DashboardView.currentUser = null;
+        primaryStage.close();
+        LoginFrame loginFrame = new LoginFrame();
+        Stage loginStage = new Stage();
+        try {
+            loginFrame.start(loginStage);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    /**
+     * 在应用程序关闭时调用，确保定时任务能够优雅地停止。
+     */
+    @Override
+    public void stop() throws Exception {
+        super.stop();
+        userManager.shutdownScheduler(); // 关闭 UserManager 的定时任务
+        if (scheduler != null) {
+            scheduler.shutdown(); // 关闭 DashboardView 的定时任务
+        }
+        Platform.exit(); // 退出 JavaFX 应用程序
+        System.exit(0); // 停止执行程序
+    }
 }
-
-
-

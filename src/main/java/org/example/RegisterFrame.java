@@ -91,6 +91,5 @@ public class RegisterFrame extends Application {
         alert.setContentText(message);
         alert.showAndWait();
     }
+
 }
-
-
