@@ -17,7 +17,6 @@ import org.example.dataImport.DataImportController;
 import org.example.list.TransactionViewer;
 import org.example.analysis.AnalysisView;
 
-
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import java.io.BufferedReader;
@@ -175,7 +174,7 @@ public class DashboardView extends Application {
         ImageView userIcon = new ImageView(
                 getClass().getResource("/img/user.jpg").toExternalForm()
         );
-       // 设置图片大小（可调）
+        // 设置图片大小（可调）
         userIcon.setFitWidth(60);
         userIcon.setFitHeight(60);
 
@@ -199,7 +198,7 @@ public class DashboardView extends Application {
         userLabel.setStyle("-fx-font-size: 16px; -fx-padding: 8px;");
         passLabel.setStyle("-fx-font-size: 16px; -fx-padding: 8px;");
 
-       // 创建储蓄金额和剩余预算标签
+        // 创建储蓄金额和剩余预算标签
         Label savedAmountLabel = new Label("Saved Amount: $" + (currentUser != null ? currentUser.getSavedAmount() : "N/A"));
         Label remainingBudgetLabel = new Label("Remaining Budget: $" + (currentUser != null ? calculateRemainingBudget(currentUser) : "N/A"));
 
@@ -244,15 +243,17 @@ public class DashboardView extends Application {
         chartPane.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
 
         // 检查是否有交易记录，如果有则显示图表
-        String transactionFile = currentUser.getUsername() + "_transactions.csv";
-        try (BufferedReader br = new BufferedReader(new FileReader(transactionFile))) {
-            // 跳过表头
-            String line = br.readLine();
-            if ((line = br.readLine()) != null) {
-                importDone = true;
+        String transactionFile = currentUser != null ? currentUser.getUsername() + "_transactions.csv" : null;
+        if (transactionFile != null) {
+            try (BufferedReader br = new BufferedReader(new FileReader(transactionFile))) {
+                // 跳过表头
+                String line = br.readLine();
+                if ((line = br.readLine()) != null) {
+                    importDone = true;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
 
         chartPane.setVisible(importDone);
@@ -274,11 +275,12 @@ public class DashboardView extends Application {
         Scene scene = new Scene(mainLayout, 1000, 800);
 
         primaryStage.setScene(scene);
-
-
     }
 
     private PieChart createPieChart() {
+        if (currentUser == null) {
+            return new PieChart();
+        }
         // 创建 SpendingStructureChart 实例以获取数据
         SpendingStructureChart spendingStructureChart = new SpendingStructureChart(currentUser);
         // 加载数据
@@ -314,6 +316,9 @@ public class DashboardView extends Application {
     }
 
     private void updateChart() {
+        if (currentUser == null) {
+            return;
+        }
         // 调用 UserManager 的 checkTransactionsFile 方法检测文件变化
         userManager.checkTransactionsFile();
 
@@ -332,6 +337,9 @@ public class DashboardView extends Application {
      * 更新 savedAmount 和 annualSavedAmount，并刷新界面显示。
      */
     void updateSavedAmounts() {
+        if (currentUser == null) {
+            return;
+        }
         // 调用 UserManager 的 checkTransactionsFile 方法更新 savedAmount 和 annualSavedAmount
         userManager.checkTransactionsFile();
     }
