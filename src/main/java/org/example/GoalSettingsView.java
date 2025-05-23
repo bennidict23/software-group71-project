@@ -11,9 +11,6 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import org.example.DashboardView;
-import org.example.User;
-import org.example.UserManager;
 
 public class GoalSettingsView {
 
@@ -86,6 +83,7 @@ public class GoalSettingsView {
 
         // 创建返回仪表盘按钮
         Button backToDashboardButton = new Button("Back to Dashboard");
+        backToDashboardButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
         backToDashboardButton.setOnAction(e -> {
             DashboardView dashboardView = new DashboardView();
             try {
