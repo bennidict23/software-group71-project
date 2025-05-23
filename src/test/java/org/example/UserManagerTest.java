@@ -8,22 +8,19 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class UserManagerTest {
     private static final String TEST_USERS_FILE = "test_users.csv";
-    private static final String TEST_SETTINGS_FILE = "test_user_settings.csv";
     private UserManager userManager;
 
     @BeforeEach
     void setUp() throws IOException {
         // 清理测试文件
         Files.deleteIfExists(Paths.get(TEST_USERS_FILE));
-        Files.deleteIfExists(Paths.get(TEST_SETTINGS_FILE));
         // 初始化测试用 UserManager
-        userManager = new UserManager(TEST_USERS_FILE, TEST_SETTINGS_FILE);
+        userManager = new UserManager(TEST_USERS_FILE);
     }
 
     @AfterEach
     void tearDown() throws IOException {
         Files.deleteIfExists(Paths.get(TEST_USERS_FILE));
-        Files.deleteIfExists(Paths.get(TEST_SETTINGS_FILE));
     }
 
     @Test
@@ -90,12 +87,9 @@ public class UserManagerTest {
         user.setCurrentMonth(1);
         userManager.saveUserSettings(user);
 
-        // 强制重置
         userManager.checkAndResetMonthlySettings(user);
         User reloaded = userManager.getUser("gina");
         assertEquals(500, reloaded.getMonthlyTarget()); // 应重置为500
         assertEquals(2000, reloaded.getMonthlyBudget()); // 应重置为2000
     }
 }
-
-
