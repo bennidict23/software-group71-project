@@ -52,6 +52,7 @@ public class ChangePasswordView extends Application {
 
         // 返回 Dashboard 按钮
         Button btnBackToDashboard = new Button("Back to Dashboard");
+        btnBackToDashboard.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
         btnBackToDashboard.setOnAction(e -> {
             primaryStage.close();
             showDashboard();
