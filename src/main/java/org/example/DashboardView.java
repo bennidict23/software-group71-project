@@ -16,8 +16,6 @@ import org.example.analysis.SpendingStructureChart;
 import org.example.dataImport.DataImportController;
 import org.example.list.TransactionViewer;
 import org.example.analysis.AnalysisView;
-
-
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -218,7 +216,8 @@ public class DashboardView extends Application {
         chartPane.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
 
         // 检查是否有交易记录，如果有则显示图表
-        try (BufferedReader br = new BufferedReader(new FileReader("transactions.csv"))) {
+        String transactionFile = currentUser.getUsername() + "_transactions.csv";
+        try (BufferedReader br = new BufferedReader(new FileReader(transactionFile))) {
             // 跳过表头
             String line = br.readLine();
             if ((line = br.readLine()) != null) {
