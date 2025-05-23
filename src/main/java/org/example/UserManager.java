@@ -12,20 +12,26 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class UserManager {
-    private static final String USERS_FILE = "users.csv";
-    private static final String SETTINGS_FILE = "user_settings.csv";
-
+    private final String usersFile;
+    private final String settingsFile;
     private ScheduledExecutorService scheduler;
     private boolean isLoggedIn = false; // 标志变量，表示是否有用户登录
 
-    public UserManager() {
+    // 构造方法允许注入文件路径，便于测试
+    public UserManager(String usersFile, String settingsFile) {
+        this.usersFile = usersFile;
+        this.settingsFile = settingsFile;
         // 如果文件不存在，则创建并添加表头
-        createFileIfNotExists(USERS_FILE, "username,password\n");
-        createFileIfNotExists(SETTINGS_FILE, "username,annualTarget,monthlyTarget,monthlyBudget,housingBudget,shoppingBudget,foodDiningBudget,giftsDonationsBudget,transportationBudget,entertainmentBudget,personalCareBudget,healthcareBudget,savedAmount,annualSavedAmount,currentYear,currentMonth\n");
-
+        createFileIfNotExists(usersFile, "username,password\n");
+        createFileIfNotExists(settingsFile, "username,annualTarget,monthlyTarget,monthlyBudget,housingBudget,shoppingBudget,foodDiningBudget,giftsDonationsBudget,transportationBudget,entertainmentBudget,personalCareBudget,healthcareBudget,savedAmount,annualSavedAmount,currentYear,currentMonth\n");
         // 启动定时任务，每5秒检查一次transactions.csv文件的变化
         scheduler = Executors.newSingleThreadScheduledExecutor();
         scheduler.scheduleAtFixedRate(this::checkTransactionsFile, 0, 5, TimeUnit.SECONDS);
+    }
+
+    // 无参构造默认用生产环境文件名（兼容原有调用）
+    public UserManager() {
+        this("users.csv", "user_settings.csv");
     }
 
     private void createFileIfNotExists(String filePath, String header) {
@@ -44,7 +50,7 @@ public class UserManager {
         if (getUser(username) != null) {
             return false;
         }
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(USERS_FILE, true))) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(usersFile, true))) {
             bw.write(username + "," + password);
             bw.newLine();
         } catch (IOException e) {
@@ -58,7 +64,7 @@ public class UserManager {
 
     // 根据用户名查找用户
     public User getUser(String username) {
-        try (BufferedReader br = new BufferedReader(new FileReader(USERS_FILE))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(usersFile))) {
             String line;
             br.readLine(); // 跳过标题行
             while ((line = br.readLine()) != null) {
@@ -71,7 +77,7 @@ public class UserManager {
                 }
             }
         } catch (FileNotFoundException e) {
-            System.err.println("User file not found: " + USERS_FILE + ". Please check the file path.");
+            System.err.println("User file not found: " + usersFile + ". Please check the file path.");
         } catch (IOException e) {
             System.err.println("Error reading user file: " + e.getMessage());
         }
@@ -80,7 +86,7 @@ public class UserManager {
 
     // 更新用户密码并同步到CSV文件
     public boolean updateUserPassword(String username, String newPassword) {
-        File inputFile = new File(USERS_FILE);
+        File inputFile = new File(usersFile);
         File tempFile = new File("users_temp.csv");
 
         List<String> lines = new ArrayList<>();
@@ -128,7 +134,7 @@ public class UserManager {
     public boolean authenticate(String username, String password) {
         User user = getUser(username);
         if (user != null) {
-            isLoggedIn = true; // 用户登录成功，设置标志变量
+            isLoggedIn = true;
             if (user.getPassword().equals(password)) {
                 checkAndCreateTransactionFile(username);
                 return true;
@@ -144,7 +150,7 @@ public class UserManager {
 
     // 修改后的加载用户设置方法
     public void loadUserSettings(User user) {
-        try (BufferedReader br = new BufferedReader(new FileReader(SETTINGS_FILE))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(settingsFile))) {
             String line;
             br.readLine(); // 跳过标题行
             while ((line = br.readLine()) != null) {
@@ -185,7 +191,7 @@ public class UserManager {
                 }
             }
         } catch (FileNotFoundException e) {
-            System.err.println("Settings file not found: " + SETTINGS_FILE + ". Please check the file path.");
+            System.err.println("Settings file not found: " + settingsFile + ". Please check the file path.");
         } catch (IOException e) {
             System.err.println("Error reading settings file: " + e.getMessage());
         }
@@ -193,7 +199,7 @@ public class UserManager {
 
     // 保存用户设置
     public void saveUserSettings(User user) {
-        File inputFile = new File(SETTINGS_FILE);
+        File inputFile = new File(settingsFile);
         File tempFile = new File("settings_temp.csv");
         List<String> lines = new ArrayList<>();
         boolean found = false;
@@ -361,6 +367,7 @@ public class UserManager {
             return;
         }
 
+        if (lines.size() < 2) return; // 没有实际交易数据
         List<String> currentTransactions = lines.subList(1, lines.size());
         List<String> lastTransactions = getLastTransactions();
 
