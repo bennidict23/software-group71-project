@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.time.LocalDate;
 
 import org.example.DashboardView;
+import org.example.FormattedInput;
+import org.example.analysis.AnalysisView;
+
 import org.example.User;
 import org.example.utils.CategoryRulesManager;
 import org.example.utils.DeepSeekCategoryService;
@@ -11,6 +14,7 @@ import org.example.utils.DeepSeekCategoryService;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
@@ -166,10 +170,9 @@ public class TransactionView {
     }
 
     private void layoutUI() {
-        // 创建返回按钮
-        Button btnBack = new Button("Dashboard");
-        btnBack.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
-        btnBack.setOnAction(e -> returnToDashboard());
+        //----------------------导航栏按钮------------------------
+
+        //-----------------------导航栏按钮 End-----------------------
 
         // 搜索组件
         searchField.setPromptText("Search...");
@@ -184,14 +187,14 @@ public class TransactionView {
         // 按钮栏
         HBox buttonBar = new HBox(10, loadButton, saveChangesButton);
         buttonBar.setPadding(new Insets(10));
-
+        HBox navBar = this.getNavigationBar();
         // 主布局容器
         VBox mainContainer = new VBox(10);
         mainContainer.setPadding(new Insets(10));
 
         // 按层级添加组件
         mainContainer.getChildren().addAll(
-                btnBack, // 顶部返回按钮
+                navBar,
                 searchBox, // 搜索栏
                 table, // 数据表格
                 buttonBar // 底部按钮栏
@@ -238,8 +241,37 @@ public class TransactionView {
 
         return alert.getResult() == buttonTypeYes;
     }
+    //---------------------------导航栏------------------------------
+    private HBox getNavigationBar(){
+        Button dashboardBtn = new Button("Dashboard");
+        Button analysisBtn = new Button("Analysis");
+        Button insertionBtn = new Button("Insertion");
+        
+        // 设置按钮样式
+        final String navStyle = "-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold;";
+        dashboardBtn.setStyle(navStyle);
+        analysisBtn.setStyle(navStyle);
+        insertionBtn.setStyle(navStyle);
 
-    private void returnToDashboard() {
+        // 按钮事件绑定
+        dashboardBtn.setOnAction(e -> goToDashboard());
+        analysisBtn.setOnAction(e -> goToAnalysis());
+        insertionBtn.setOnAction(e -> goToInsertion());
+
+
+        // 创建横向导航容器
+        HBox navBar = new HBox(10);
+        navBar.setPadding(new Insets(0, 10, 10, 10));
+        navBar.setAlignment(Pos.CENTER_LEFT);
+        navBar.getChildren().addAll(
+            dashboardBtn, 
+            analysisBtn,
+            insertionBtn
+        );
+
+        return navBar;
+    }
+    private void goToDashboard() {
         Stage currentStage = (Stage) root.getScene().getWindow();
         currentStage.close();
 
@@ -251,7 +283,31 @@ public class TransactionView {
             ex.printStackTrace();
         }
     }
+    private void goToAnalysis() {
+        Stage currentStage = (Stage) root.getScene().getWindow();
+        currentStage.close();
 
+        // 保留用户状态
+        AnalysisView analysis = new AnalysisView();
+        try {
+            analysis.start(new Stage());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+        private void goToInsertion() {
+        Stage currentStage = (Stage) root.getScene().getWindow();
+        currentStage.close();
+
+        // 保留用户状态
+        FormattedInput insertion = new FormattedInput();
+        try {
+            insertion.start(new Stage());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+    //---------------------------导航栏 End------------------------------
     public BorderPane getView() {
         return root;
     }

@@ -6,8 +6,11 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
+import javafx.event.ActionEvent;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.TextFieldTableCell;
@@ -15,6 +18,9 @@ import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.converter.DefaultStringConverter;
+
+import org.example.analysis.AnalysisView;
+import org.example.list.TransactionViewer;
 import org.example.utils.DeepSeekCategoryService;
 import org.example.utils.LoadingUtils;
 
@@ -88,7 +94,7 @@ public class FormattedInput extends Application {
         mainLayout.setPadding(new Insets(20));
 
         // Create button area
-        HBox buttonBox = gethBox(primaryStage);
+        VBox buttonBox = getvBox(primaryStage);
 
         // Create table view
         tableView = createTableView();
@@ -111,7 +117,20 @@ public class FormattedInput extends Application {
         primaryStage.show();
     }
 
-    private HBox gethBox(Stage primaryStage) {
+    private VBox getvBox(Stage primaryStage) {
+
+        // 创建横向导航容器
+        HBox navBar = this.getNavigationBar();
+        HBox actBar = this.getActionButtons(primaryStage);
+        VBox buttonBox = new VBox(10,
+                navBar,
+                actBar
+        );
+        buttonBox.setPadding(new Insets(10));
+        return buttonBox;
+    }
+    private HBox getActionButtons(Stage primaryStage) {
+        // 原功能按钮
         Button importButton = new Button("Import CSV File");
         importButton.setOnAction(e -> importCSV(primaryStage));
 
@@ -124,31 +143,79 @@ public class FormattedInput extends Application {
         Button deleteButton = new Button("Delete Selected");
         deleteButton.setOnAction(e -> deleteSelectedRows());
 
-        // 新增：返回 Dashboard 按钮
-        Button btnBack = new Button("Dashboard");
-        btnBack.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
-        btnBack.setOnAction(e -> {
-            try {
-                // 注：DashboardView 是你的主页面
-                DashboardView dashboard = new DashboardView();
-                dashboard.start(primaryStage);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        });
+        // 创建功能按钮容器
+        HBox actionBox = new HBox(10, importButton, templateButton, saveButton, deleteButton);
+        actionBox.setPadding(new Insets(10));
+        
+        return actionBox;
+    }
+    //---------------------------导航栏------------------------------
+    private HBox getNavigationBar() {
+        // 创建导航按钮
+        Button dashboardBtn = new Button("Dashboard");
+        Button analysisBtn = new Button("Analysis");
+        Button transactionBtn = new Button("Transaction");
 
-        // 把 btnBack 放到 HBox 里
-        HBox buttonBox = new HBox(10,
-                importButton,
-                templateButton,
-                saveButton,
-                deleteButton,
-                btnBack // <- 这里
-        );
-        buttonBox.setPadding(new Insets(10));
-        return buttonBox;
+        // 设置按钮样式
+        final String navStyle = "-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold;";
+        dashboardBtn.setStyle(navStyle);
+        analysisBtn.setStyle(navStyle);
+        transactionBtn.setStyle(navStyle);
+
+        // 按钮事件绑定
+        dashboardBtn.setOnAction(e -> goToDashboard(e));
+        analysisBtn.setOnAction(e -> goToAnalysis(e));
+        transactionBtn.setOnAction(e -> goToTransaction(e));
+
+        // 创建横向导航容器
+        HBox navBar = new HBox(10);
+        navBar.setPadding(new Insets(0, 10, 10, 10));
+        navBar.setAlignment(Pos.CENTER_LEFT);
+        navBar.getChildren().addAll(dashboardBtn, transactionBtn, analysisBtn);
+        
+        return navBar;
+    }
+    private void goToDashboard(ActionEvent event) {
+        // 通过事件源获取当前窗口
+        Stage currentStage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        currentStage.close();
+        
+        // 保留用户状态
+        DashboardView dashboard = new DashboardView();
+        try {
+            dashboard.start(new Stage());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+    private void goToTransaction(ActionEvent event) {
+        // 通过事件源获取当前窗口
+        Stage currentStage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        currentStage.close();
+        
+        // 保留用户状态
+        TransactionViewer transaction = new TransactionViewer();
+        try {
+            transaction.start(new Stage());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+    private void goToAnalysis(ActionEvent event) {
+        // 通过事件源获取当前窗口
+        Stage currentStage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        currentStage.close();
+        
+        // 保留用户状态
+        AnalysisView analysis = new AnalysisView();
+        try {
+            analysis.start(new Stage());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
+    //---------------------------导航栏 End------------------------------
     private VBox createAddRecordForm() {
         VBox formBox = new VBox(10);
         formBox.setPadding(new Insets(15));

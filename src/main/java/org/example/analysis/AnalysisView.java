@@ -9,8 +9,11 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import org.example.DashboardView;
+import org.example.FormattedInput;
 import org.example.User;
 import org.example.analysis.BudgetRecommendationView;
+import org.example.list.TransactionView;
+import org.example.list.TransactionViewer;
 import org.example.utils.LoadingUtils;
 
 /**
@@ -94,8 +97,13 @@ public class AnalysisView extends Application {
         budgetRecommendationBtn = createMenuButton("Budget Recommendations", e -> showBudgetRecommendation());
 
         // 返回按钮
-        Button backButton = createMenuButton("Return to Dashboard", e -> returnToDashboard());
-        backButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
+        Button dashboardButton = createMenuButton("Dashboard", e -> goToDashboard());
+        Button insertionButton = createMenuButton("Insertion", e -> goToInsertion());
+        Button trancationButton = createMenuButton("Transaction", e -> goToTransaction());
+
+        dashboardButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
+        insertionButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
+        trancationButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
 
         // 添加按钮到面板
         menuPanel.getChildren().addAll(
@@ -104,7 +112,9 @@ public class AnalysisView extends Application {
                 spendingForecastBtn,
                 budgetRecommendationBtn,
                 new Separator(),
-                backButton);
+                dashboardButton,
+                insertionButton,
+                trancationButton);
 
         return menuPanel;
     }
@@ -288,10 +298,8 @@ public class AnalysisView extends Application {
         }
     }
 
-    /**
-     * 返回仪表盘
-     */
-    private void returnToDashboard() {
+    //-------------------导航栏------------------
+    private void goToDashboard() {
         Stage currentStage = (Stage) mainContainer.getScene().getWindow();
         currentStage.close();
 
@@ -303,6 +311,31 @@ public class AnalysisView extends Application {
             showAlert("Error", "Failed to return to dashboard: " + e.getMessage());
         }
     }
+    private void goToInsertion() {
+        Stage currentStage = (Stage) mainContainer.getScene().getWindow();
+        currentStage.close();
+
+        try {
+            FormattedInput insertion = new FormattedInput();
+            insertion.start(new Stage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Error", "Failed to return to insertion: " + e.getMessage());
+        }
+    }
+    private void goToTransaction() {
+        Stage currentStage = (Stage) mainContainer.getScene().getWindow();
+        currentStage.close();
+
+        try {
+            TransactionViewer transaction = new TransactionViewer();
+            transaction.start(new Stage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Error", "Failed to return to transaction: " + e.getMessage());
+        }
+    }
+    //-------------------导航栏 End------------------
 
     /**
      * 显示提示对话框

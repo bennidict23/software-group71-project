@@ -2,8 +2,10 @@ package org.example;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.LineChart;
@@ -11,6 +13,9 @@ import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
+
+import org.example.analysis.AnalysisView;
+import org.example.list.TransactionView;
 import org.example.list.TransactionViewer;
 
 
@@ -105,58 +110,83 @@ public class DashboardView extends Application {
         }
 
         // 初始化页面选择下拉框，添加页面选项，并设置页面切换逻辑
-        pageSelector = new ComboBox<>();
-        pageSelector.getItems().addAll("Formatted Input", "Transaction Viewer", "Analysis");
-        pageSelector.setPromptText("Select a page...");
-        pageSelector.setOnAction(e -> {
-            String selectedPage = pageSelector.getValue();
-            if (selectedPage == null || selectedPage.isEmpty()) {
-                return;
-            }
-            if ("Formatted Input".equals(selectedPage)) {
-                if (formattedInput != null) {
-                    try {
-                        // 这里不关闭 primaryStage，而是在新的窗口中打开 FormattedInput
-                        Stage formattedStage = new Stage();
-                        formattedInput.start(formattedStage);
-                        primaryStage.close();
-                        // 不关闭主舞台
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                }
-            } else if ("Transaction Viewer".equals(selectedPage)) {
-                try {
-                    // 这里不关闭 primaryStage，而是在新的窗口中打开 TransactionViewer
-                    Stage transactionStage = new Stage();
-                    TransactionViewer transactionViewer = new TransactionViewer();
-                    transactionStage.setTitle("交易记录查看器");
-                    transactionViewer.start(transactionStage);
-                    primaryStage.close();
-                    // 不关闭主舞台
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            } else if ("Analysis".equals(selectedPage)) {
-                try {
-                    // 打开Analysis页面
-                    Stage analysisStage = new Stage();
-                    analysisStage.setTitle("Data Analysis");
-                    // 使用AnalysisView
-                    new org.example.analysis.AnalysisView().start(analysisStage);
-                    primaryStage.close();
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    showAlert(Alert.AlertType.ERROR, "Error", "Failed to open Analysis page: " + ex.getMessage());
-                }
-            }
-            pageSelector.setValue(selectedPage);
-        });
+        // pageSelector = new ComboBox<>();
+        // pageSelector.getItems().addAll("Formatted Input", "Transaction Viewer", "Analysis");
+        // pageSelector.setPromptText("Select a page...");
+        // pageSelector.setOnAction(e -> {
+        //     String selectedPage = pageSelector.getValue();
+        //     if (selectedPage == null || selectedPage.isEmpty()) {
+        //         return;
+        //     }
+        //     if ("Formatted Input".equals(selectedPage)) {
+        //         if (formattedInput != null) {
+        //             try {
+        //                 // 这里不关闭 primaryStage，而是在新的窗口中打开 FormattedInput
+        //                 Stage formattedStage = new Stage();
+        //                 formattedInput.start(formattedStage);
+        //                 primaryStage.close();
+        //                 // 不关闭主舞台
+        //             } catch (Exception ex) {
+        //                 ex.printStackTrace();
+        //             }
+        //         }
+        //     } else if ("Transaction Viewer".equals(selectedPage)) {
+        //         try {
+        //             // 这里不关闭 primaryStage，而是在新的窗口中打开 TransactionViewer
+        //             Stage transactionStage = new Stage();
+        //             TransactionViewer transactionViewer = new TransactionViewer();
+        //             transactionStage.setTitle("交易记录查看器");
+        //             transactionViewer.start(transactionStage);
+        //             primaryStage.close();
+        //             // 不关闭主舞台
+        //         } catch (Exception ex) {
+        //             ex.printStackTrace();
+        //         }
+        //     } else if ("Analysis".equals(selectedPage)) {
+        //         try {
+        //             // 打开Analysis页面
+        //             Stage analysisStage = new Stage();
+        //             analysisStage.setTitle("Data Analysis");
+        //             // 使用AnalysisView
+        //             new org.example.analysis.AnalysisView().start(analysisStage);
+        //             primaryStage.close();
+        //         } catch (Exception ex) {
+        //             ex.printStackTrace();
+        //             showAlert(Alert.AlertType.ERROR, "Error", "Failed to open Analysis page: " + ex.getMessage());
+        //         }
+        //     }
+        //     pageSelector.setValue(selectedPage);
+        // });
+        //-------------------导航栏----------------
         // 创建导航栏布局，包含页面选择下拉框
-        HBox navigationBox = new HBox(pageSelector);
-        navigationBox.setAlignment(Pos.TOP_CENTER);
-        navigationBox.setPadding(new Insets(10));
+        // HBox navigationBox = new HBox(pageSelector);
+        // navigationBox.setAlignment(Pos.TOP_CENTER);
+        // navigationBox.setPadding(new Insets(10));
+        Button transactionBtn = new Button("Transaction");
+        Button analysisBtn = new Button("Analysis");
+        Button insertionBtn = new Button("Insertion");
+        
+        // 设置按钮样式
+        final String navStyle = "-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold;";
+        transactionBtn.setStyle(navStyle);
+        analysisBtn.setStyle(navStyle);
+        insertionBtn.setStyle(navStyle);
 
+
+        // 按钮事件绑定
+        transactionBtn.setOnAction(e -> goToTransaction(e));
+        analysisBtn.setOnAction(e -> goToAnalysis(e));
+        insertionBtn.setOnAction(e -> goToInsertion(e));
+
+        HBox navigationBox = new HBox(10);
+        navigationBox.setPadding(new Insets(0, 10, 10, 10));
+        navigationBox.setAlignment(Pos.CENTER_LEFT);
+        navigationBox.getChildren().addAll(
+            transactionBtn, 
+            analysisBtn,
+            insertionBtn
+        );
+        //--------------导航栏 End---------------
         // 创建标题标签
         Label titleLabel = new Label("Dashboard");
         titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
@@ -247,6 +277,47 @@ public class DashboardView extends Application {
         scheduler.scheduleAtFixedRate(this::updateSavedAmounts, 0, 10, TimeUnit.SECONDS);
     }
 
+    //---------------------------导航栏点击事件------------------------------
+    private void goToTransaction(ActionEvent event) {
+        // 通过事件源获取当前窗口
+        Stage currentStage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        currentStage.close();
+        
+        // 保留用户状态
+        TransactionViewer transaction = new TransactionViewer();
+        try {
+            transaction.start(new Stage());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+    private void goToAnalysis(ActionEvent event) {
+        // 通过事件源获取当前窗口
+        Stage currentStage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        currentStage.close();
+        
+        // 保留用户状态
+        AnalysisView analysis = new AnalysisView();
+        try {
+            analysis.start(new Stage());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+    private void goToInsertion(ActionEvent event) {
+        // 通过事件源获取当前窗口
+        Stage currentStage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        currentStage.close();
+        
+        // 保留用户状态
+        FormattedInput insertion = new FormattedInput();
+        try {
+            insertion.start(new Stage());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+    //---------------------------导航栏 End------------------------------
     /**
      * 更新 savedAmount 和 annualSavedAmount，并刷新界面显示。
      */
