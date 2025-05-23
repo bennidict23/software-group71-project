@@ -23,7 +23,7 @@ public class UserTest {
         assertEquals(6000, user.getAnnualTarget());
         assertEquals(500, user.getMonthlyTarget());
         assertEquals(2000, user.getMonthlyBudget());
-        assertEquals(2000.0 / 8, user.getHousingBudget());
+        assertEquals(2000.0 / 4, user.getTransportationBudget());
         assertEquals(3000, user.getSavedAmount());
         assertEquals(36000, user.getAnnualSavedAmount());
         assertEquals(LocalDate.now().getYear(), user.getCurrentYear());
@@ -56,23 +56,15 @@ public class UserTest {
 
     @Test
     public void testAllBudgetsSetterGetter() {
-        user.setHousingBudget(100);
+        user.setTransportationBudget(100);
         user.setShoppingBudget(200);
-        user.setFoodDiningBudget(300);
-        user.setGiftsDonationsBudget(400);
-        user.setTransportationBudget(500);
-        user.setEntertainmentBudget(600);
-        user.setPersonalCareBudget(700);
-        user.setHealthcareBudget(800);
+        user.setOtherBudget(300);
+        user.setEntertainmentBudget(400);
 
-        assertEquals(100, user.getHousingBudget());
+        assertEquals(100, user.getTransportationBudget());
         assertEquals(200, user.getShoppingBudget());
-        assertEquals(300, user.getFoodDiningBudget());
-        assertEquals(400, user.getGiftsDonationsBudget());
-        assertEquals(500, user.getTransportationBudget());
-        assertEquals(600, user.getEntertainmentBudget());
-        assertEquals(700, user.getPersonalCareBudget());
-        assertEquals(800, user.getHealthcareBudget());
+        assertEquals(300, user.getOtherBudget());
+        assertEquals(400, user.getEntertainmentBudget());
     }
 
     @Test
@@ -97,35 +89,25 @@ public class UserTest {
 
     @Test
     public void testResetMonthlySettings() {
-        // 先改变相关属性为不同值
         user.setMonthlyTarget(1000);
         user.setMonthlyBudget(10000);
-        user.setHousingBudget(111);
+        user.setTransportationBudget(111);
         user.setShoppingBudget(222);
-        user.setFoodDiningBudget(333);
-        user.setGiftsDonationsBudget(444);
-        user.setTransportationBudget(555);
-        user.setEntertainmentBudget(666);
-        user.setPersonalCareBudget(777);
-        user.setHealthcareBudget(888);
+        user.setOtherBudget(333);
+        user.setEntertainmentBudget(444);
 
         user.resetMonthlySettings();
 
         assertEquals(500, user.getMonthlyTarget());
         assertEquals(2000, user.getMonthlyBudget());
-        assertEquals(2000.0 / 8, user.getHousingBudget(), 0.0001);
-        assertEquals(2000.0 / 8, user.getShoppingBudget(), 0.0001);
-        assertEquals(2000.0 / 8, user.getFoodDiningBudget(), 0.0001);
-        assertEquals(2000.0 / 8, user.getGiftsDonationsBudget(), 0.0001);
-        assertEquals(2000.0 / 8, user.getTransportationBudget(), 0.0001);
-        assertEquals(2000.0 / 8, user.getEntertainmentBudget(), 0.0001);
-        assertEquals(2000.0 / 8, user.getPersonalCareBudget(), 0.0001);
-        assertEquals(2000.0 / 8, user.getHealthcareBudget(), 0.0001);
+        assertEquals(500.0, user.getTransportationBudget(), 0.0001);
+        assertEquals(500.0, user.getShoppingBudget(), 0.0001);
+        assertEquals(500.0, user.getOtherBudget(), 0.0001);
+        assertEquals(500.0, user.getEntertainmentBudget(), 0.0001);
     }
 
     @Test
     public void testResetAnnualSettings() {
-        // 先改变属性
         user.setAnnualTarget(10000);
         user.setMonthlyTarget(888);
         user.setMonthlyBudget(8888);
@@ -137,4 +119,3 @@ public class UserTest {
         assertEquals(2000, user.getMonthlyBudget());
     }
 }
-
