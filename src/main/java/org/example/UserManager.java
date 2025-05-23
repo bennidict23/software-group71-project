@@ -550,4 +550,69 @@ public class UserManager {
             }
         }
     }
+
+
+    // 添加用户的方法
+    public boolean addUser(String username, String password) {
+        if (getUser(username) != null) {
+            return false; // 用户已存在
+        }
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(usersFile, true))) {
+            bw.write(username + "," + password);
+            bw.newLine();
+            return true;
+        } catch (IOException e) {
+            System.err.println("Error writing to users file: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // 删除用户的方法
+    public boolean removeUser(String username) {
+        File inputFile = new File(usersFile);
+        File tempFile = new File("users_temp.csv");
+
+        List<String> lines = new ArrayList<>();
+        boolean found = false;
+        try (BufferedReader br = new BufferedReader(new FileReader(inputFile))) {
+            String line = br.readLine();
+            if (line != null) { // 写入标题行
+                lines.add(line);
+            }
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 2 && parts[0].equals(username)) {
+                    found = true;
+                } else {
+                    lines.add(line);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading users file: " + e.getMessage());
+            return false;
+        }
+
+        if (!found) {
+            return false; // 用户未找到
+        }
+
+        try (PrintWriter writer = new PrintWriter(new FileWriter(tempFile))) {
+            for (String l : lines) {
+                writer.println(l);
+            }
+        } catch (IOException e) {
+            System.err.println("Error writing to temporary file: " + e.getMessage());
+            return false;
+        }
+
+        if (!inputFile.delete()) {
+            System.out.println("Could not delete original file.");
+            return false;
+        }
+        if (!tempFile.renameTo(inputFile)) {
+            System.out.println("Could not rename temp file.");
+            return false;
+        }
+        return true;
+    }
 }
