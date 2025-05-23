@@ -32,7 +32,7 @@ import java.util.*;
  */
 public class SpendingForecastView extends BorderPane {
 
-    private static final String TRANSACTION_FILE = "./transactions.csv";
+    private static final String TRANSACTION_FILE_PATTERN = "%s_transactions.csv";
     private final User currentUser;
 
     // 历史数据
@@ -188,16 +188,9 @@ public class SpendingForecastView extends BorderPane {
         String period = historicalPeriodSelector.getValue();
         LocalDate startDate = calculateHistoricalStartDate(period);
 
-        // 尝试多个可能的文件路径
-        File transactionFile = new File(TRANSACTION_FILE);
-        if (!transactionFile.exists()) {
-            // 尝试项目根目录
-            transactionFile = new File("transactions.csv");
-            if (!transactionFile.exists()) {
-                // 尝试从当前工作目录的根开始查找
-                transactionFile = new File(System.getProperty("user.dir"), "transactions.csv");
-            }
-        }
+        // 使用基于用户名的文件名
+        String transactionFileName = String.format(TRANSACTION_FILE_PATTERN, currentUser.getUsername());
+        File transactionFile = new File(transactionFileName);
 
         System.out.println("交易文件路径: " + transactionFile.getAbsolutePath());
         System.out.println("文件是否存在: " + transactionFile.exists());
@@ -231,8 +224,8 @@ public class SpendingForecastView extends BorderPane {
                 }
 
                 try {
-                    // 解析日期在索引2 (Date列)
-                    LocalDate date = LocalDate.parse(parts[2], formatter);
+                    // 解析日期在索引3 (Date列)
+                    LocalDate date = LocalDate.parse(parts[3], formatter);
 
                     // 检查日期是否在选定的时间范围内
                     if (date.isBefore(startDate)) {
@@ -240,13 +233,13 @@ public class SpendingForecastView extends BorderPane {
                         continue;
                     }
 
-                    // 金额在索引3 (Amount列)
-                    double amount = Double.parseDouble(parts[3]);
+                    // 金额在索引4 (Amount列)
+                    double amount = Double.parseDouble(parts[4]);
 
                     System.out.println("处理第 " + lineCount + " 行: 日期=" + date + ", 金额=" + amount);
 
-                    // 仅考虑支出（负数金额）
-                    if (amount < 0) {
+                    // 仅考虑支出（正数金额）
+                    if (amount > 0) {
                         amount = Math.abs(amount); // 转为正数以便计算
                         YearMonth month = YearMonth.from(date);
                         processedCount++;
@@ -255,7 +248,7 @@ public class SpendingForecastView extends BorderPane {
                         monthlySpending.put(month, monthlySpending.getOrDefault(month, 0.0) + amount);
                         System.out.println("添加月度支出: " + month + " = " + amount);
                     } else {
-                        System.out.println("跳过第 " + lineCount + " 行: 非支出交易 (金额不是负数)");
+                        System.out.println("跳过第 " + lineCount + " 行: 非支出交易 (金额不是正数)");
                         skippedCount++;
                     }
                 } catch (Exception e) {
@@ -302,7 +295,7 @@ public class SpendingForecastView extends BorderPane {
      */
     private void generateForecast() {
         // 如果历史数据不足，无法进行预测
-        if (monthlySpending.size() < 3) {
+        if (monthlySpending.size() < 2) {
             return;
         }
 
@@ -347,7 +340,7 @@ public class SpendingForecastView extends BorderPane {
         contentContainer.getChildren().clear();
 
         // 如果没有足够的历史数据，显示提示信息
-        if (monthlySpending.size() < 3) {
+        if (monthlySpending.size() < 2) {
             showInsufficientDataMessage();
             return;
         }
@@ -474,7 +467,7 @@ public class SpendingForecastView extends BorderPane {
         Label titleLabel = new Label("Insufficient Data");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 18));
 
-        Label messageLabel = new Label("At least 3 months of spending data are required for forecasting.");
+        Label messageLabel = new Label("At least 2 months of spending data are required for forecasting.");
         messageLabel.setTextFill(Color.GRAY);
 
         Label actionLabel = new Label("Please add more transaction records and try again.");

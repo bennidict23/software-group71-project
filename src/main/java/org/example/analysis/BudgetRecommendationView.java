@@ -27,7 +27,7 @@ import java.util.*;
  */
 public class BudgetRecommendationView extends BorderPane {
 
-    private static final String TRANSACTION_FILE = "./transactions.csv";
+    private static final String TRANSACTION_FILE_PATTERN = "%s_transactions.csv";
     private final User currentUser;
     private final UserManager userManager;
     private final Map<String, Double> monthlyAverages = new HashMap<>();
@@ -137,16 +137,9 @@ public class BudgetRecommendationView extends BorderPane {
         String period = periodSelector.getValue();
         LocalDate startDate = calculateHistoricalStartDate(period);
 
-        // 尝试多个可能的文件路径
-        File transactionFile = new File(TRANSACTION_FILE);
-        if (!transactionFile.exists()) {
-            // 尝试项目根目录
-            transactionFile = new File("transactions.csv");
-            if (!transactionFile.exists()) {
-                // 尝试从当前工作目录的根开始查找
-                transactionFile = new File(System.getProperty("user.dir"), "transactions.csv");
-            }
-        }
+        // 使用基于用户名的文件名
+        String transactionFileName = String.format(TRANSACTION_FILE_PATTERN, currentUser.getUsername());
+        File transactionFile = new File(transactionFileName);
 
         System.out.println("交易文件路径: " + transactionFile.getAbsolutePath());
         System.out.println("文件是否存在: " + transactionFile.exists());
@@ -179,8 +172,8 @@ public class BudgetRecommendationView extends BorderPane {
                 String[] parts = line.split(",");
                 if (parts.length >= 6) {
                     try {
-                        // 解析日期在索引2 (Date列)
-                        LocalDate date = LocalDate.parse(parts[2], formatter);
+                        // 解析日期在索引3 (Date列)
+                        LocalDate date = LocalDate.parse(parts[3], formatter);
 
                         // 只考虑选定时间范围内的数据
                         if (date.isBefore(startDate)) {
@@ -189,16 +182,16 @@ public class BudgetRecommendationView extends BorderPane {
                         }
 
                         // 解析金额和类别
-                        // 金额在索引3 (Amount列)
-                        double amount = Double.parseDouble(parts[3]);
-                        // 类别在索引4 (Category列)
-                        String category = parts[4].trim();
+                        // 金额在索引4 (Amount列)
+                        double amount = Double.parseDouble(parts[4]);
+                        // 类别在索引5 (Category列)
+                        String category = parts[5].trim();
 
                         System.out
                                 .println("处理第 " + lineCount + " 行: 日期=" + date + ", 金额=" + amount + ", 类别=" + category);
 
-                        // 只考虑支出（负数金额）
-                        if (amount < 0) {
+                        // 只考虑支出（正数金额）
+                        if (amount > 0) {
                             amount = Math.abs(amount); // 转为正数用于计算
                             processedCount++;
 
@@ -209,7 +202,7 @@ public class BudgetRecommendationView extends BorderPane {
                             categoryExpenses.get(category).add(amount);
                             System.out.println("添加类别支出: " + category + " = " + amount);
                         } else {
-                            System.out.println("跳过第 " + lineCount + " 行: 非支出交易 (金额不是负数)");
+                            System.out.println("跳过第 " + lineCount + " 行: 非支出交易 (金额不是正数)");
                             skippedCount++;
                         }
                     } catch (Exception e) {
