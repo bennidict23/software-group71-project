@@ -23,7 +23,8 @@ public class UserManager {
         this.settingsFile = settingsFile;
         // 如果文件不存在，则创建并添加表头
         createFileIfNotExists(usersFile, "username,password\n");
-        createFileIfNotExists(settingsFile, "username,annualTarget,monthlyTarget,monthlyBudget,housingBudget,shoppingBudget,foodDiningBudget,giftsDonationsBudget,transportationBudget,entertainmentBudget,personalCareBudget,healthcareBudget,savedAmount,annualSavedAmount,currentYear,currentMonth\n");
+        createFileIfNotExists(settingsFile,
+                "username,annualTarget,monthlyTarget,monthlyBudget,housingBudget,shoppingBudget,foodDiningBudget,giftsDonationsBudget,transportationBudget,entertainmentBudget,personalCareBudget,healthcareBudget,savedAmount,annualSavedAmount,currentYear,currentMonth\n");
         // 启动定时任务，每5秒检查一次transactions.csv文件的变化
         scheduler = Executors.newSingleThreadScheduledExecutor();
         scheduler.scheduleAtFixedRate(this::checkTransactionsFile, 0, 5, TimeUnit.SECONDS);
@@ -53,13 +54,11 @@ public class UserManager {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(usersFile, true))) {
             bw.write(username + "," + password);
             bw.newLine();
+            return true;
         } catch (IOException e) {
             System.err.println("Error writing to users file: " + e.getMessage());
             return false;
         }
-        // 检查并创建交易记录文件
-        checkAndCreateTransactionFile(username);
-        return true;
     }
 
     // 根据用户名查找用户
@@ -136,7 +135,6 @@ public class UserManager {
         if (user != null) {
             isLoggedIn = true;
             if (user.getPassword().equals(password)) {
-                checkAndCreateTransactionFile(username);
                 return true;
             }
         }
@@ -213,7 +211,8 @@ public class UserManager {
                 String[] parts = line.split(",");
                 if (parts[0].equals(user.getUsername())) {
                     lines.add(user.getUsername() + "," + user.getAnnualTarget() + "," + user.getMonthlyTarget() + ","
-                            + user.getMonthlyBudget() + "," + user.getHousingBudget() + "," + user.getShoppingBudget() + ","
+                            + user.getMonthlyBudget() + "," + user.getHousingBudget() + "," + user.getShoppingBudget()
+                            + ","
                             + user.getFoodDiningBudget() + "," + user.getGiftsDonationsBudget() + ","
                             + user.getTransportationBudget() + "," + user.getEntertainmentBudget() + ","
                             + user.getPersonalCareBudget() + "," + user.getHealthcareBudget() + ","
@@ -367,7 +366,8 @@ public class UserManager {
             return;
         }
 
-        if (lines.size() < 2) return; // 没有实际交易数据
+        if (lines.size() < 2)
+            return; // 没有实际交易数据
         List<String> currentTransactions = lines.subList(1, lines.size());
         List<String> lastTransactions = getLastTransactions();
 
@@ -415,7 +415,8 @@ public class UserManager {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 LocalDate date = LocalDate.parse(dateStr, formatter);
 
-                if (date.getYear() == LocalDate.now().getYear() && date.getMonthValue() == LocalDate.now().getMonthValue()) {
+                if (date.getYear() == LocalDate.now().getYear()
+                        && date.getMonthValue() == LocalDate.now().getMonthValue()) {
                     newMonthlySpent += amount;
                 }
                 if (date.getYear() == LocalDate.now().getYear()) {
@@ -432,7 +433,8 @@ public class UserManager {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 LocalDate date = LocalDate.parse(dateStr, formatter);
 
-                if (date.getYear() == LocalDate.now().getYear() && date.getMonthValue() == LocalDate.now().getMonthValue()) {
+                if (date.getYear() == LocalDate.now().getYear()
+                        && date.getMonthValue() == LocalDate.now().getMonthValue()) {
                     removedMonthlySpent += amount;
                 }
                 if (date.getYear() == LocalDate.now().getYear()) {
@@ -544,13 +546,13 @@ public class UserManager {
         File file = new File(transactionFile);
         if (!file.exists()) {
             try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
-                writer.println("id,username,date,amount,category,description");
+                writer.println("id,username,source,date,amount,category,description");
             } catch (IOException e) {
-                System.err.println("Failed to create transaction file: " + transactionFile + ". Error: " + e.getMessage());
+                System.err.println(
+                        "Failed to create transaction file: " + transactionFile + ". Error: " + e.getMessage());
             }
         }
     }
-
 
     // 添加用户的方法
     public boolean addUser(String username, String password) {
