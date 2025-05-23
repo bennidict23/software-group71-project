@@ -16,6 +16,10 @@ import org.example.analysis.SpendingStructureChart;
 import org.example.dataImport.DataImportController;
 import org.example.list.TransactionViewer;
 import org.example.analysis.AnalysisView;
+
+
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -168,6 +172,12 @@ public class DashboardView extends Application {
         // 创建标题标签
         Label titleLabel = new Label("Dashboard");
         titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
+        ImageView userIcon = new ImageView(
+                getClass().getResource("/img/user.jpg").toExternalForm()
+        );
+       // 设置图片大小（可调）
+        userIcon.setFitWidth(60);
+        userIcon.setFitHeight(60);
 
         // 创建新的框
         VBox newBox = new VBox();
@@ -178,7 +188,18 @@ public class DashboardView extends Application {
         newBox.setPrefHeight(250);
         HBox.setHgrow(newBox, Priority.ALWAYS);
 
-        // 创建储蓄金额和剩余预算标签
+        // 获取用户名与掩码密码
+        String username = currentUser != null ? currentUser.getUsername() : "N/A";
+        String password = currentUser != null ? currentUser.getPassword() : "";
+        String maskedPassword = password.replaceAll(".", "*");
+
+        Label userLabel = new Label("User: " + username);
+        Label passLabel = new Label("Password: " + maskedPassword);
+
+        userLabel.setStyle("-fx-font-size: 16px; -fx-padding: 8px;");
+        passLabel.setStyle("-fx-font-size: 16px; -fx-padding: 8px;");
+
+       // 创建储蓄金额和剩余预算标签
         Label savedAmountLabel = new Label("Saved Amount: $" + (currentUser != null ? currentUser.getSavedAmount() : "N/A"));
         Label remainingBudgetLabel = new Label("Remaining Budget: $" + (currentUser != null ? calculateRemainingBudget(currentUser) : "N/A"));
 
@@ -186,8 +207,15 @@ public class DashboardView extends Application {
         savedAmountLabel.setStyle("-fx-font-size: 16px; -fx-padding: 10px;");
         remainingBudgetLabel.setStyle("-fx-font-size: 16px; -fx-padding: 10px;");
 
-        // 将标签添加到 newBox 中
-        newBox.getChildren().addAll(savedAmountLabel, remainingBudgetLabel);
+        // 将标签添加到 newBox 中（新增的用户名和密码label放最上面）
+        newBox.getChildren().addAll(
+                userIcon,
+                userLabel,
+                passLabel,
+                savedAmountLabel,
+                remainingBudgetLabel
+        );
+
 
         // 创建另一个 VBox
         VBox anotherBox = new VBox();
@@ -244,7 +272,10 @@ public class DashboardView extends Application {
 
         // 创建场景并设置到主舞台
         Scene scene = new Scene(mainLayout, 1000, 800);
+
         primaryStage.setScene(scene);
+
+
     }
 
     private PieChart createPieChart() {
