@@ -331,12 +331,12 @@ public class DashboardView extends Application {
     /**
      * 更新 savedAmount 和 annualSavedAmount，并刷新界面显示。
      */
-    private void updateSavedAmounts() {
+    void updateSavedAmounts() {
         // 调用 UserManager 的 checkTransactionsFile 方法更新 savedAmount 和 annualSavedAmount
         userManager.checkTransactionsFile();
     }
 
-    private double calculateRemainingBudget(User user) {
+    double calculateRemainingBudget(User user) {
         if (user == null) {
             return 0.0;
         }
@@ -368,7 +368,7 @@ public class DashboardView extends Application {
      *
      * @param primaryStage 主舞台
      */
-    private void logout(Stage primaryStage) {
+    void logout(Stage primaryStage) {
         // 停止定时任务
         if (scheduler != null) {
             scheduler.shutdownNow();
