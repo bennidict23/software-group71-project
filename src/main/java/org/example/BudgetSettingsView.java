@@ -10,10 +10,6 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import org.example.DashboardView;
-import org.example.User;
-import org.example.UserManager;
-
 import java.util.HashMap;
 import java.util.Map;
 

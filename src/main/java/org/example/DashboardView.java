@@ -13,9 +13,13 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import org.example.analysis.SpendingStructureChart;
+import org.example.dataImport.DataImportController;
 import org.example.list.TransactionViewer;
 import org.example.analysis.AnalysisView;
 
+
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -42,13 +46,13 @@ public class DashboardView extends Application {
     // 标记是否已导入过数据
     private static boolean importDone = false;
 
-    /** 由外部（FormattedInput.importCSV）调用，标记已导入数据 */
+    /** 由外部（DataImport）调用，标记已导入数据 */
     public static void setImportDone(boolean done) {
         importDone = done;
     }
 
-    // 格式化输入页面对象，用于处理格式化输入相关操作
-    private FormattedInput formattedInput = null;
+    // DataImport控制器对象，用于处理数据导入相关操作
+    private DataImportController dataImportController = null;
     // 用于显示消费趋势的折线图
     private LineChart<String, Number> lineChart;
     // 定时任务，用于定期更新 savedAmount 和 annualSavedAmount
@@ -98,14 +102,9 @@ public class DashboardView extends Application {
 
         primaryStage.setTitle("User Dashboard");
 
-        // 如果 formattedInput 对象为空，进行初始化
-        if (formattedInput == null) {
-            formattedInput = new FormattedInput();
-        }
-
         // 初始化页面选择下拉框，添加页面选项，并设置页面切换逻辑
         pageSelector = new ComboBox<>();
-        pageSelector.getItems().addAll("Dashboard", "Formatted Input", "Transaction Viewer", "Analysis", "Set Goal", "Set Budget", "Change Password");
+        pageSelector.getItems().addAll("Dashboard", "Data Import", "Transaction Viewer", "Analysis", "Set Goal", "Set Budget", "Change Password");
         pageSelector.setPromptText("Select a page...");
         pageSelector.setOnAction(e -> {
             String selectedPage = pageSelector.getValue();
@@ -114,11 +113,15 @@ public class DashboardView extends Application {
             }
             if ("Dashboard".equals(selectedPage)) {
                 showDashboard(primaryStage);
-            } else if ("Formatted Input".equals(selectedPage)) {
+            } else if ("Data Import".equals(selectedPage)) {
                 try {
-                    formattedInput.start(primaryStage);
+                    // 创建新的DataImportController实例并显示
+                    String username = (currentUser != null) ? currentUser.getUsername() : "default_user";
+                    dataImportController = new DataImportController(primaryStage, username);
+                    dataImportController.show();
                 } catch (Exception ex) {
                     ex.printStackTrace();
+                    showAlert(Alert.AlertType.ERROR, "Error", "Failed to open Data Import page: " + ex.getMessage());
                 }
             } else if ("Transaction Viewer".equals(selectedPage)) {
                 try {
@@ -169,6 +172,12 @@ public class DashboardView extends Application {
         // 创建标题标签
         Label titleLabel = new Label("Dashboard");
         titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
+        ImageView userIcon = new ImageView(
+                getClass().getResource("/img/user.jpg").toExternalForm()
+        );
+       // 设置图片大小（可调）
+        userIcon.setFitWidth(60);
+        userIcon.setFitHeight(60);
 
         // 创建新的框
         VBox newBox = new VBox();
@@ -179,7 +188,18 @@ public class DashboardView extends Application {
         newBox.setPrefHeight(250);
         HBox.setHgrow(newBox, Priority.ALWAYS);
 
-        // 创建储蓄金额和剩余预算标签
+        // 获取用户名与掩码密码
+        String username = currentUser != null ? currentUser.getUsername() : "N/A";
+        String password = currentUser != null ? currentUser.getPassword() : "";
+        String maskedPassword = password.replaceAll(".", "*");
+
+        Label userLabel = new Label("User: " + username);
+        Label passLabel = new Label("Password: " + maskedPassword);
+
+        userLabel.setStyle("-fx-font-size: 16px; -fx-padding: 8px;");
+        passLabel.setStyle("-fx-font-size: 16px; -fx-padding: 8px;");
+
+       // 创建储蓄金额和剩余预算标签
         Label savedAmountLabel = new Label("Saved Amount: $" + (currentUser != null ? currentUser.getSavedAmount() : "N/A"));
         Label remainingBudgetLabel = new Label("Remaining Budget: $" + (currentUser != null ? calculateRemainingBudget(currentUser) : "N/A"));
 
@@ -187,8 +207,15 @@ public class DashboardView extends Application {
         savedAmountLabel.setStyle("-fx-font-size: 16px; -fx-padding: 10px;");
         remainingBudgetLabel.setStyle("-fx-font-size: 16px; -fx-padding: 10px;");
 
-        // 将标签添加到 newBox 中
-        newBox.getChildren().addAll(savedAmountLabel, remainingBudgetLabel);
+        // 将标签添加到 newBox 中（新增的用户名和密码label放最上面）
+        newBox.getChildren().addAll(
+                userIcon,
+                userLabel,
+                passLabel,
+                savedAmountLabel,
+                remainingBudgetLabel
+        );
+
 
         // 创建另一个 VBox
         VBox anotherBox = new VBox();
@@ -217,7 +244,8 @@ public class DashboardView extends Application {
         chartPane.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
 
         // 检查是否有交易记录，如果有则显示图表
-        try (BufferedReader br = new BufferedReader(new FileReader("transactions.csv"))) {
+        String transactionFile = currentUser.getUsername() + "_transactions.csv";
+        try (BufferedReader br = new BufferedReader(new FileReader(transactionFile))) {
             // 跳过表头
             String line = br.readLine();
             if ((line = br.readLine()) != null) {
@@ -244,7 +272,10 @@ public class DashboardView extends Application {
 
         // 创建场景并设置到主舞台
         Scene scene = new Scene(mainLayout, 1000, 800);
+
         primaryStage.setScene(scene);
+
+
     }
 
     private PieChart createPieChart() {
