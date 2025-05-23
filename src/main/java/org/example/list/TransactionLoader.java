@@ -3,8 +3,9 @@ package org.example.list;
 // TransactionLoader.java
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,11 +15,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TransactionLoader {
+    private String username;
     public List<Transaction> loadTransactions(String filePath, String currentUsername) throws IOException {
         List<Transaction> transactions = new ArrayList<>();
         File file = new File(filePath);
-
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+        this.username = currentUsername;
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)))  {
             String headerLine = br.readLine(); // Skip header
             System.out.println("Header: " + headerLine);
 
@@ -43,9 +45,6 @@ public class TransactionLoader {
                 else if (header.equals("description"))
                     descriptionIdx = i;
             }
-            if (currentUsername != null && !currentUsername.isEmpty() && userIdx == -1) {
-                throw new IOException("CSV文件缺少User列，无法按用户过滤");
-            }
             if (dateIdx == -1 || amountIdx == -1) {
                 throw new IOException("CSV文件必须包含Date和Amount列");
             }
@@ -63,12 +62,6 @@ public class TransactionLoader {
                 // 确保有足够的列
                 if (values.length <= Math.max(dateIdx, Math.max(amountIdx, Math.max(categoryIdx, descriptionIdx)))) {
                     System.out.println("警告: 第" + lineCount + "行数据列数不足，已跳过");
-                    continue;
-                }
-                // ================ 新增用户过滤逻辑 ================
-                if (currentUsername != null && !currentUsername.isEmpty() && 
-                    userIdx >= 0 && !values[userIdx].trim().equals(currentUsername)) {
-                    System.out.println("跳过非当前用户记录: " + line);
                     continue;
                 }
                 try {
@@ -118,7 +111,8 @@ public class TransactionLoader {
      * @param transaction 要删除的交易对象
      */
     public void deleteTransaction(Transaction transaction) throws IOException {
-        Path path = Paths.get("transactions.csv");
+        
+        Path path = Paths.get(this.username + "_transactions.csv");
 
         // 读取所有行
         List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);

@@ -1,20 +1,24 @@
 package org.example.analysis;
 
+import org.example.DashboardView;
+import org.example.User;
+import org.example.dataImport.DataImportView;
+import org.example.list.TransactionViewer;
+import org.example.utils.LoadingUtils;
+
 import javafx.application.Application;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.Separator;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import org.example.DashboardView;
-import org.example.FormattedInput;
-import org.example.User;
-import org.example.analysis.BudgetRecommendationView;
-import org.example.list.TransactionView;
-import org.example.list.TransactionViewer;
-import org.example.utils.LoadingUtils;
 
 /**
  * AnalysisView类 - 数据分析页面
@@ -98,12 +102,12 @@ public class AnalysisView extends Application {
 
         // 返回按钮
         Button dashboardButton = createMenuButton("Dashboard", e -> goToDashboard());
-        Button insertionButton = createMenuButton("Insertion", e -> goToInsertion());
-        Button trancationButton = createMenuButton("Transaction", e -> goToTransaction());
+        // Button insertionButton = createMenuButton("Insertion", e -> goToInsertion());
+        // Button trancationButton = createMenuButton("Transaction", e -> goToTransaction());
 
         dashboardButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
-        insertionButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
-        trancationButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
+        // insertionButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
+        // trancationButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
 
         // 添加按钮到面板
         menuPanel.getChildren().addAll(
@@ -112,9 +116,10 @@ public class AnalysisView extends Application {
                 spendingForecastBtn,
                 budgetRecommendationBtn,
                 new Separator(),
-                dashboardButton,
-                insertionButton,
-                trancationButton);
+                dashboardButton
+                // insertionButton,
+                // trancationButton
+        );
 
         return menuPanel;
     }
@@ -315,12 +320,12 @@ public class AnalysisView extends Application {
         Stage currentStage = (Stage) mainContainer.getScene().getWindow();
         currentStage.close();
 
+        // 保留用户状态
+        DataImportView insertion = new DataImportView(currentStage);
         try {
-            FormattedInput insertion = new FormattedInput();
-            insertion.start(new Stage());
-        } catch (Exception e) {
-            e.printStackTrace();
-            showAlert("Error", "Failed to return to insertion: " + e.getMessage());
+            insertion.show();
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
     }
     private void goToTransaction() {

@@ -1,12 +1,15 @@
 package org.example.dataImport;
 
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import org.example.list.Transaction;
-import org.example.utils.DeepSeekCategoryService;
-import org.mozilla.universalchardet.UniversalDetector;
-
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -17,6 +20,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+
+import org.example.list.Transaction;
+import org.example.utils.DeepSeekCategoryService;
+import org.mozilla.universalchardet.UniversalDetector;
+
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 
 public class DataImportModel {
 
@@ -254,7 +264,7 @@ public class DataImportModel {
                     for (Transaction transaction : allTransactions) {
                         String line = String.format("%d,%s,%s,%s,%.2f,%s,%s",
                                 transaction.getId(),
-                                transaction.getUser(),
+                                transaction.getUsername(),
                                 transaction.getSource(),
                                 transaction.getDate().format(DateTimeFormatter.ISO_DATE),
                                 transaction.getAmount(),
@@ -395,7 +405,7 @@ public class DataImportModel {
             for (Transaction transaction : transactions) {
                 String line = String.format("%d,%s,%s,%s,%.2f,%s,%s",
                         transaction.getId(),
-                        transaction.getUser(),
+                        transaction.getUsername(),
                         transaction.getSource(),
                         transaction.getDate().format(DateTimeFormatter.ISO_DATE),
                         transaction.getAmount(),

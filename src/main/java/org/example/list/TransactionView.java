@@ -4,10 +4,9 @@ import java.io.IOException;
 import java.time.LocalDate;
 
 import org.example.DashboardView;
-import org.example.FormattedInput;
-import org.example.analysis.AnalysisView;
-
 import org.example.User;
+import org.example.analysis.AnalysisView;
+import org.example.dataImport.DataImportView;
 import org.example.utils.CategoryRulesManager;
 import org.example.utils.DeepSeekCategoryService;
 
@@ -244,19 +243,19 @@ public class TransactionView {
     //---------------------------导航栏------------------------------
     private HBox getNavigationBar(){
         Button dashboardBtn = new Button("Dashboard");
-        Button analysisBtn = new Button("Analysis");
-        Button insertionBtn = new Button("Insertion");
+        // Button analysisBtn = new Button("Analysis");
+        // Button insertionBtn = new Button("Insertion");
         
         // 设置按钮样式
         final String navStyle = "-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold;";
         dashboardBtn.setStyle(navStyle);
-        analysisBtn.setStyle(navStyle);
-        insertionBtn.setStyle(navStyle);
+        // analysisBtn.setStyle(navStyle);
+        // insertionBtn.setStyle(navStyle);
 
         // 按钮事件绑定
         dashboardBtn.setOnAction(e -> goToDashboard());
-        analysisBtn.setOnAction(e -> goToAnalysis());
-        insertionBtn.setOnAction(e -> goToInsertion());
+        // analysisBtn.setOnAction(e -> goToAnalysis());
+        // insertionBtn.setOnAction(e -> goToInsertion());
 
 
         // 创建横向导航容器
@@ -264,9 +263,9 @@ public class TransactionView {
         navBar.setPadding(new Insets(0, 10, 10, 10));
         navBar.setAlignment(Pos.CENTER_LEFT);
         navBar.getChildren().addAll(
-            dashboardBtn, 
-            analysisBtn,
-            insertionBtn
+            dashboardBtn
+            // analysisBtn,
+            // insertionBtn
         );
 
         return navBar;
@@ -295,14 +294,14 @@ public class TransactionView {
             ex.printStackTrace();
         }
     }
-        private void goToInsertion() {
+    private void goToInsertion() {
         Stage currentStage = (Stage) root.getScene().getWindow();
         currentStage.close();
 
         // 保留用户状态
-        FormattedInput insertion = new FormattedInput();
+        DataImportView insertion = new DataImportView(currentStage);
         try {
-            insertion.start(new Stage());
+            insertion.show();
         } catch (Exception ex) {
             ex.printStackTrace();
         }
