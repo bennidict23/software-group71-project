@@ -39,11 +39,6 @@ public class DashboardView extends Application {
     // 用户管理对象，用于处理用户相关操作
     private UserManager userManager = new UserManager();
 
-    // 界面中的一些组件，用于展示和操作用户信息
-    private Label passwordLabel;
-    private Label budgetLabel;
-    private Label goalLabel;
-
     // 页面选择下拉框，用于切换不同的功能页面
     private ComboBox<String> pageSelector;
 
