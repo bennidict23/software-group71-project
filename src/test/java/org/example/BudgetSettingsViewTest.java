@@ -27,19 +27,19 @@ class BudgetSettingsViewTest {
         budgetSettingsView.showBudgetSettings(primaryStage);
 
         Scene scene = primaryStage.getScene();
-        TextField housingField = (TextField) scene.lookup("#housingField");
+        TextField transportationField = (TextField) scene.lookup("#transportationField");
         TextField shoppingField = (TextField) scene.lookup("#shoppingField");
 
-        housingField.setText("1500");
+        transportationField.setText("1500");
         shoppingField.setText("300");
 
-        Button housingSetButton = (Button) scene.lookup("#housingSetButton");
+        Button transportationSetButton = (Button) scene.lookup("#transportationSetButton");
         Button shoppingSetButton = (Button) scene.lookup("#shoppingSetButton");
 
-        housingSetButton.fire();
+        transportationSetButton.fire();
         shoppingSetButton.fire();
 
-        assertEquals(1500.0, testUser.getHousingBudget());
+        assertEquals(1500.0, testUser.getTransportationBudget());
         assertEquals(300.0, testUser.getShoppingBudget());
     }
 

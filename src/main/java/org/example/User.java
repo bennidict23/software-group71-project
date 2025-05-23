@@ -8,14 +8,10 @@ public class User {
     private double annualTarget;   // 年储蓄目标
     private double monthlyTarget;  // 月储蓄目标
     private double monthlyBudget;  // 月预算总额
-    private double housingBudget;  // 住房预算
-    private double shoppingBudget; // 购物预算
-    private double foodDiningBudget; // 饮食预算
-    private double giftsDonationsBudget; // 礼物和捐赠预算
     private double transportationBudget; // 交通预算
+    private double shoppingBudget; // 购物预算
+    private double otherBudget;    // 其他预算
     private double entertainmentBudget; // 娱乐预算
-    private double personalCareBudget; // 个人护理预算
-    private double healthcareBudget; // 医疗保健预算
     private double savedAmount;    // 本月已攒金额（初始=月工资+支出）
     private double annualSavedAmount; // 本年已攒金额（初始=年工资+支出）
     private int currentYear;       // 当前年份
@@ -28,14 +24,10 @@ public class User {
         this.annualTarget = 6000;    // 年目标默认6000
         this.monthlyTarget = 500;    // 月目标默认500
         this.monthlyBudget = 2000;   // 月预算默认2000
-        this.housingBudget = monthlyBudget / 8; // 均分预算（8类）
-        this.shoppingBudget = monthlyBudget / 8;
-        this.foodDiningBudget = monthlyBudget / 8;
-        this.giftsDonationsBudget = monthlyBudget / 8;
-        this.transportationBudget = monthlyBudget / 8;
-        this.entertainmentBudget = monthlyBudget / 8;
-        this.personalCareBudget = monthlyBudget / 8;
-        this.healthcareBudget = monthlyBudget / 8;
+        this.transportationBudget = monthlyBudget / 4; // 均分预算（4类）
+        this.shoppingBudget = monthlyBudget / 4;
+        this.otherBudget = monthlyBudget / 4;
+        this.entertainmentBudget = monthlyBudget / 4;
         // 初始化储蓄金额（启动时由UserManager填充实际支出）
         this.savedAmount = 3000;     // 模拟月工资3000
         this.annualSavedAmount = 36000; // 模拟年工资36000
@@ -59,29 +51,17 @@ public class User {
     public double getMonthlyBudget() { return monthlyBudget; }
     public void setMonthlyBudget(double monthlyBudget) { this.monthlyBudget = monthlyBudget; }
 
-    public double getHousingBudget() { return housingBudget; }
-    public void setHousingBudget(double housingBudget) { this.housingBudget = housingBudget; }
+    public double getTransportationBudget() { return transportationBudget; }
+    public void setTransportationBudget(double transportationBudget) { this.transportationBudget = transportationBudget; }
 
     public double getShoppingBudget() { return shoppingBudget; }
     public void setShoppingBudget(double shoppingBudget) { this.shoppingBudget = shoppingBudget; }
 
-    public double getFoodDiningBudget() { return foodDiningBudget; }
-    public void setFoodDiningBudget(double foodDiningBudget) { this.foodDiningBudget = foodDiningBudget; }
-
-    public double getGiftsDonationsBudget() { return giftsDonationsBudget; }
-    public void setGiftsDonationsBudget(double giftsDonationsBudget) { this.giftsDonationsBudget = giftsDonationsBudget; }
-
-    public double getTransportationBudget() { return transportationBudget; }
-    public void setTransportationBudget(double transportationBudget) { this.transportationBudget = transportationBudget; }
+    public double getOtherBudget() { return otherBudget; }
+    public void setOtherBudget(double otherBudget) { this.otherBudget = otherBudget; }
 
     public double getEntertainmentBudget() { return entertainmentBudget; }
     public void setEntertainmentBudget(double entertainmentBudget) { this.entertainmentBudget = entertainmentBudget; }
-
-    public double getPersonalCareBudget() { return personalCareBudget; }
-    public void setPersonalCareBudget(double personalCareBudget) { this.personalCareBudget = personalCareBudget; }
-
-    public double getHealthcareBudget() { return healthcareBudget; }
-    public void setHealthcareBudget(double healthcareBudget) { this.healthcareBudget = healthcareBudget; }
 
     public double getSavedAmount() { return savedAmount; }
     public void setSavedAmount(double savedAmount) { this.savedAmount = savedAmount; }
@@ -99,14 +79,10 @@ public class User {
     public void resetMonthlySettings() {
         this.monthlyTarget = 500;           // 月目标重置为500
         this.monthlyBudget = 2000;          // 月预算重置为2000
-        this.housingBudget = monthlyBudget / 8; // 均分预算（8类）
-        this.shoppingBudget = monthlyBudget / 8;
-        this.foodDiningBudget = monthlyBudget / 8;
-        this.giftsDonationsBudget = monthlyBudget / 8;
-        this.transportationBudget = monthlyBudget / 8;
-        this.entertainmentBudget = monthlyBudget / 8;
-        this.personalCareBudget = monthlyBudget / 8;
-        this.healthcareBudget = monthlyBudget / 8;
+        this.transportationBudget = monthlyBudget / 4; // 均分预算（4类）
+        this.shoppingBudget = monthlyBudget / 4;
+        this.otherBudget = monthlyBudget / 4;
+        this.entertainmentBudget = monthlyBudget / 4;
     }
 
     /** 重置年目标和预算（每年自动调用） */
