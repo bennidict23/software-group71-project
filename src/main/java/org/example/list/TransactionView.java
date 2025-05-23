@@ -1,32 +1,36 @@
 package org.example.list;
 
 import java.io.IOException;
-// TransactionView.java
 import java.time.LocalDate;
-import java.util.List;
 
 import org.example.DashboardView;
+import org.example.User;
 import org.example.utils.CategoryRulesManager;
 import org.example.utils.DeepSeekCategoryService;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
-import javafx.scene.control.*;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import javafx.scene.control.cell.ComboBoxTableCell;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import javafx.util.StringConverter;
-import javafx.util.converter.DefaultStringConverter;
 import javafx.util.converter.DoubleStringConverter;
 import javafx.util.converter.LocalDateStringConverter;
 
 public class TransactionView {
+    private final User currentUser = DashboardView.getCurrentUser();
+    private final String username = currentUser.getUsername();
     private final TextField searchField = new TextField();
     private final BorderPane root = new BorderPane();
     private final TableView<Transaction> table = new TableView<>();
@@ -47,7 +51,7 @@ public class TransactionView {
         // 启用表格编辑
         table.setEditable(true);
 
-        TableColumn<Transaction, String> userCol = new TableColumn<>("User");
+        // TableColumn<Transaction, String> userCol = new TableColumn<>("User");
         TableColumn<Transaction, String> sourceCol = new TableColumn<>("Source");
         TableColumn<Transaction, LocalDate> dateCol = new TableColumn<>("Date");
         TableColumn<Transaction, Double> amountCol = new TableColumn<>("Amount");
@@ -56,7 +60,7 @@ public class TransactionView {
         TableColumn<Transaction, Void> actionCol = new TableColumn<>("Actions");
 
         // 配置列值工厂
-        userCol.setCellValueFactory(data -> data.getValue().userProperty());
+        // userCol.setCellValueFactory(data -> data.getValue().userProperty());
         sourceCol.setCellValueFactory(data -> data.getValue().sourceProperty());
         dateCol.setCellValueFactory(data -> data.getValue().dateProperty());
         amountCol.setCellValueFactory(data -> data.getValue().amountProperty().asObject());
@@ -64,7 +68,7 @@ public class TransactionView {
         descCol.setCellValueFactory(data -> data.getValue().descriptionProperty());
 
         // 设置列编辑工厂
-        userCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        // userCol.setCellFactory(TextFieldTableCell.forTableColumn());
         sourceCol.setCellFactory(TextFieldTableCell.forTableColumn());
         dateCol.setCellFactory(TextFieldTableCell.forTableColumn(new LocalDateStringConverter()));
         amountCol.setCellFactory(TextFieldTableCell.forTableColumn(new DoubleStringConverter()));
@@ -74,10 +78,10 @@ public class TransactionView {
         descCol.setCellFactory(TextFieldTableCell.forTableColumn());
 
         // 配置编辑事件
-        userCol.setOnEditCommit(event -> {
-            Transaction transaction = event.getRowValue();
-            transaction.setUser(event.getNewValue());
-        });
+        // userCol.setOnEditCommit(event -> {
+        //     Transaction transaction = event.getRowValue();
+        //     transaction.setUser(event.getNewValue());
+        // });
 
         sourceCol.setOnEditCommit(event -> {
             Transaction transaction = event.getRowValue();
@@ -149,7 +153,7 @@ public class TransactionView {
         });
 
         // 设置列宽
-        userCol.setPrefWidth(100);
+        // userCol.setPrefWidth(100);
         sourceCol.setPrefWidth(100);
         dateCol.setPrefWidth(120);
         amountCol.setPrefWidth(100);
@@ -157,7 +161,7 @@ public class TransactionView {
         descCol.setPrefWidth(200);
         actionCol.setPrefWidth(100);
 
-        table.getColumns().addAll(userCol, sourceCol, dateCol, amountCol, categoryCol, descCol, actionCol);
+        table.getColumns().addAll(sourceCol, dateCol, amountCol, categoryCol, descCol, actionCol);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
     }
 
@@ -270,5 +274,9 @@ public class TransactionView {
 
     public void updateTable(ObservableList<Transaction> data) {
         table.setItems(data);
+    }
+
+    public String getCurrentUsername(){
+        return this.username;
     }
 }

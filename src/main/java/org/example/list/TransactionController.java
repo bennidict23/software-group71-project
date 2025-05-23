@@ -48,7 +48,7 @@ public class TransactionController {
     private void loadData() {
         try {
             data.clear();
-            data.addAll(loader.loadTransactions("transactions.csv"));
+            data.addAll(loader.loadTransactions("transactions.csv",view.getCurrentUsername()));
             view.updateTable(data);
         } catch (IOException ex) {
             showError("File Load Error", ex.getMessage());

@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TransactionLoader {
-    public List<Transaction> loadTransactions(String filePath) throws IOException {
+    public List<Transaction> loadTransactions(String filePath, String currentUsername) throws IOException {
         List<Transaction> transactions = new ArrayList<>();
         File file = new File(filePath);
 
@@ -43,7 +43,9 @@ public class TransactionLoader {
                 else if (header.equals("description"))
                     descriptionIdx = i;
             }
-
+            if (currentUsername != null && !currentUsername.isEmpty() && userIdx == -1) {
+                throw new IOException("CSV文件缺少User列，无法按用户过滤");
+            }
             if (dateIdx == -1 || amountIdx == -1) {
                 throw new IOException("CSV文件必须包含Date和Amount列");
             }
@@ -63,7 +65,12 @@ public class TransactionLoader {
                     System.out.println("警告: 第" + lineCount + "行数据列数不足，已跳过");
                     continue;
                 }
-
+                // ================ 新增用户过滤逻辑 ================
+                if (currentUsername != null && !currentUsername.isEmpty() && 
+                    userIdx >= 0 && !values[userIdx].trim().equals(currentUsername)) {
+                    System.out.println("跳过非当前用户记录: " + line);
+                    continue;
+                }
                 try {
                     // 解析金额，正确处理负号
                     double amount;
