@@ -152,7 +152,7 @@ public class UserManager {
         if (!file.exists()) {
             try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
                 // 表头顺序需与代码解析顺序一致
-                writer.println("username,annualTarget,monthlyTarget,monthlyBudget,transportationBudget,shoppingBudget,otherBudget,entertainmentBudget,savedAmount,annualSavedAmount,currentYear,currentMonth");
+                writer.println("username,annualTarget,monthlyTarget,monthlyBudget,transportationBudget,shoppingBudget,otherBudget,entertainmentBudget,savedAmount,annualSavedAmount,currentYear,currentMonth,annualBudget");
             } catch (IOException e) {
                 System.err.println("Failed to create settings file: " + settingsFile + ". Error: " + e.getMessage());
                 return;
@@ -163,7 +163,7 @@ public class UserManager {
             br.readLine(); // 跳过标题行
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
-                if (parts.length >= 12 && parts[0].equals(user.getUsername())) {
+                if (parts.length >= 13 && parts[0].equals(user.getUsername())) {
                     int currentYear = LocalDate.now().getYear();
                     int currentMonth = LocalDate.now().getMonthValue();
 
@@ -171,6 +171,7 @@ public class UserManager {
                     double annualSavedAmount = Double.parseDouble(parts[9]); // 原 parts[9] 是 annualSavedAmount（double）
                     int userYear = (int) Double.parseDouble(parts[10]); // 原 parts[10] 是 currentYear（整数，可能带小数）
                     int userMonth = (int) Double.parseDouble(parts[11]); // 原 parts[11] 是 currentMonth（整数，可能带小数）
+                    double annualBudget = Double.parseDouble(parts[12]); // 新增：年总预算
 
                     if (currentYear != userYear) {
                         user.resetAnnualSettings();
@@ -195,6 +196,7 @@ public class UserManager {
                         user.setAnnualSavedAmount(annualSavedAmount); // 使用解析后的 annualSavedAmount
                         user.setCurrentYear(userYear);
                         user.setCurrentMonth(userMonth);
+                        user.setAnnualBudget(annualBudget); // 新增：设置年总预算
                     }
                 }
             }
@@ -211,7 +213,7 @@ public class UserManager {
         File inputFile = new File(settingsFile);
         if (!inputFile.exists()) {
             try (PrintWriter writer = new PrintWriter(new FileWriter(inputFile))) {
-                writer.println("username,annualTarget,monthlyTarget,monthlyBudget,transportationBudget,shoppingBudget,otherBudget,entertainmentBudget,savedAmount,annualSavedAmount,currentYear,currentMonth");
+                writer.println("username,annualTarget,monthlyTarget,monthlyBudget,transportationBudget,shoppingBudget,otherBudget,entertainmentBudget,savedAmount,annualSavedAmount,currentYear,currentMonth,annualBudget");
             } catch (IOException e) {
                 System.err.println("Failed to create settings file: " + settingsFile + ". Error: " + e.getMessage());
                 return;
@@ -233,7 +235,8 @@ public class UserManager {
                             + user.getMonthlyBudget() + "," + user.getTransportationBudget() + "," + user.getShoppingBudget() + ","
                             + user.getOtherBudget() + "," + user.getEntertainmentBudget() + ","
                             + user.getSavedAmount() + "," + user.getAnnualSavedAmount() + ","
-                            + user.getCurrentYear() + "," + user.getCurrentMonth());
+                            + user.getCurrentYear() + "," + user.getCurrentMonth() + ","
+                            + user.getAnnualBudget()); // 新增：保存年总预算
                     found = true;
                 } else {
                     lines.add(line);
@@ -248,7 +251,8 @@ public class UserManager {
                     + user.getMonthlyBudget() + "," + user.getTransportationBudget() + "," + user.getShoppingBudget() + ","
                     + user.getOtherBudget() + "," + user.getEntertainmentBudget() + ","
                     + user.getSavedAmount() + "," + user.getAnnualSavedAmount() + ","
-                    + user.getCurrentYear() + "," + user.getCurrentMonth());
+                    + user.getCurrentYear() + "," + user.getCurrentMonth() + ","
+                    + user.getAnnualBudget()); // 新增：保存年总预算
         }
 
         try (PrintWriter writer = new PrintWriter(new FileWriter(tempFile))) {
@@ -264,6 +268,7 @@ public class UserManager {
             System.err.println("Failed to update settings file");
         }
     }
+
     // 检查并重置月储蓄目标和月预算
     public void checkAndResetMonthlySettings(User user) {
         int currentYear = LocalDate.now().getYear();
@@ -324,7 +329,7 @@ public class UserManager {
         return totalExpenses - totalIncome;
     }
 
-    private double getAnnualTotalExpenses(User user) {
+    public double getAnnualTotalExpenses(User user) {
         LocalDate currentDate = LocalDate.now();
         int currentYear = currentDate.getYear();
         double totalExpenses = 0.0;

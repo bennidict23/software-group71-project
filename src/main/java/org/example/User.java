@@ -16,6 +16,7 @@ public class User {
     private double annualSavedAmount; // 本年已攒金额（初始=年工资+支出）
     private int currentYear;       // 当前年份
     private int currentMonth;      // 当前月份
+    private double annualBudget;   // 年总预算
 
     public User(String username, String password) {
         this.username = username;
@@ -35,6 +36,7 @@ public class User {
         LocalDate now = LocalDate.now();
         this.currentYear = now.getYear();
         this.currentMonth = now.getMonthValue();
+        this.annualBudget = 24000;   // 年总预算默认24000
     }
 
     // -------------------- Getter & Setter --------------------
@@ -74,6 +76,9 @@ public class User {
     public void setCurrentYear(int currentYear) { this.currentYear = currentYear; }
     public void setCurrentMonth(int currentMonth) { this.currentMonth = currentMonth; }
 
+    public double getAnnualBudget() { return annualBudget; }
+    public void setAnnualBudget(double annualBudget) { this.annualBudget = annualBudget; }
+
     // -------------------- 重置方法 --------------------
     /** 重置月目标和预算（每月自动调用） */
     public void resetMonthlySettings() {
@@ -89,5 +94,6 @@ public class User {
     public void resetAnnualSettings() {
         resetMonthlySettings(); // 先重置月设置
         this.annualTarget = 6000; // 年目标重置为6000
+        this.annualBudget = 24000; // 年总预算重置为24000
     }
 }
