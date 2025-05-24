@@ -179,9 +179,16 @@ public class DataImportModel {
         return new Transaction((int)id, user, source, date, amount, category, description);
     }
 
+
     private Transaction createWechatTransaction(String[] rowData) {
         String processedDate = processDate(rowData[0]);
-        String processedAmount = processAmount(rowData[5]);
+
+        // 处理金额，并根据交易类型调整符号
+        double amount = Double.parseDouble(processAmount(rowData[5]));
+        if ("支出".equals(rowData[4])) {
+            amount = -amount;
+        }
+        String processedAmount = processAmount(String.valueOf(amount));
 
         return new Transaction(
                 (int)nextId.getAndIncrement(),
@@ -197,17 +204,23 @@ public class DataImportModel {
     private Transaction createAlipayTransaction(String[] rowData) {
         String processedDate = processDate(rowData[0]);
 
+        // 处理金额，并根据交易类型调整符号
+        double amount = Double.parseDouble(processAmount(rowData[6]));
+        if ("支出".equals(rowData[4])) {
+            amount = -amount;
+        }
+        String processedAmount = processAmount(String.valueOf(amount));
+
         return new Transaction(
                 (int)nextId.getAndIncrement(),
                 currentUser,
                 "alipay",
                 LocalDate.parse(processedDate),
-                Double.parseDouble(rowData[6]),
+                Double.parseDouble(processedAmount),
                 "Uncategorized",
                 rowData[1] + rowData[4]
         );
     }
-
     public void saveToCSV() throws IOException {
         File file = new File(currentUser + "_transactions.csv");
         boolean fileExists = file.exists();
