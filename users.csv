@@ -1,2 +1,8 @@
 username,password
 1234,1
+testuser,newpass123
+newuser,newpass
+duplicate,123
+,
+testuser1,testpass
+,
