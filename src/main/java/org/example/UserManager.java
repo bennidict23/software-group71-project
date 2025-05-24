@@ -1,15 +1,29 @@
 package org.example;
 
-import javafx.application.Platform;
-import javafx.scene.control.Alert;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.charset.Charset;
+import java.nio.charset.MalformedInputException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import javafx.application.Platform;
+import javafx.scene.control.Alert;
 
 public class UserManager {
     private final String usersFile;
@@ -379,7 +393,11 @@ public class UserManager {
 
         List<String> lines;
         try {
-            lines = Files.readAllLines(file.toPath());
+            try {
+                lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+            } catch (MalformedInputException e) {
+                lines = Files.readAllLines(file.toPath(), Charset.forName("GBK"));
+            }
         } catch (IOException e) {
             System.err.println("Error reading transaction file: " + e.getMessage());
             return;
@@ -470,20 +488,26 @@ public class UserManager {
 
     // 获取上次检查时的交易记录
     private List<String> getLastTransactions(String username) {
-        String lastTransactionsFile = username + "_lastTransactions.txt";
-        File file = new File(lastTransactionsFile);
-        if (!file.exists()) {
+        Path file = Paths.get(username + "_lastTransactions.txt");
+        System.out.println("Trying to read: " + file.toAbsolutePath());
+
+        if (!Files.exists(file)) {
+            System.out.println("File not found");
             return new ArrayList<>();
         }
 
-        List<String> lines;
         try {
-            lines = Files.readAllLines(file.toPath());
+            // 尝试UTF-8读取，失败后回退到GBK
+            try {
+                return Files.readAllLines(file, StandardCharsets.UTF_8);
+            } catch (MalformedInputException e) {
+                return Files.readAllLines(file, Charset.forName("GBK"));
+            }
         } catch (IOException e) {
-            System.err.println("Error reading last transactions file: " + e.getMessage());
+            System.err.println("Critical error: " + e.getClass().getSimpleName());
+            e.printStackTrace();
             return new ArrayList<>();
         }
-        return lines;
     }
 
     // 保存当前检查时的交易记录
