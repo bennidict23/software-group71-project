@@ -1,16 +1,16 @@
 package org.example.dataImport;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.example.DashboardView;
+import org.example.list.Transaction;
+
 import javafx.collections.ObservableList;
 import javafx.scene.control.Alert;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import org.example.DashboardView;
-import org.example.list.Transaction;
-
-import java.io.File;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 
 public class DataImportController {
 
@@ -44,20 +44,14 @@ public class DataImportController {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Select CSV File to Import");
         fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("CSV Files", "*.csv")
-        );
+                new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
 
         File file = fileChooser.showOpenDialog(view.getStage());
         if (file != null) {
             DataImportModel.ImportResult result = model.importCSV(file);
 
             if (result.isSuccess()) {
-                // Notify Dashboard if available
-                try {
-                    DashboardView.setImportDone(true);
-                } catch (Exception e) {
-                    // Dashboard might not be available, ignore
-                }
+                DashboardView.setImportDone(true);
 
                 view.showAlert(Alert.AlertType.INFORMATION,
                         "Import Successful",
@@ -76,8 +70,7 @@ public class DataImportController {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Save CSV Template");
         fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("CSV Files", "*.csv")
-        );
+                new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
         fileChooser.setInitialFileName("transactions.csv");
 
         File file = fileChooser.showSaveDialog(view.getStage());
@@ -109,8 +102,7 @@ public class DataImportController {
     }
 
     private void handleDeleteSelected() {
-        ObservableList<Transaction> selectedTransactions =
-                view.getTableView().getSelectionModel().getSelectedItems();
+        ObservableList<Transaction> selectedTransactions = view.getTableView().getSelectionModel().getSelectedItems();
 
         if (selectedTransactions.isEmpty()) {
             view.showAlert(Alert.AlertType.ERROR,
@@ -128,8 +120,7 @@ public class DataImportController {
         boolean confirmed = view.showConfirmDialog(
                 "Confirm Clear All Data",
                 "Are you sure you want to clear all data?",
-                "This action cannot be undone."
-        );
+                "This action cannot be undone.");
 
         if (confirmed) {
             model.clearAllTransactions();
@@ -172,8 +163,7 @@ public class DataImportController {
                 view.getSelectedDate(),
                 amount,
                 view.getCategoryText().isEmpty() ? "Uncategorized" : view.getCategoryText(),
-                view.getDescriptionText()
-        );
+                view.getDescriptionText());
 
         model.addTransaction(transaction);
         view.clearForm();

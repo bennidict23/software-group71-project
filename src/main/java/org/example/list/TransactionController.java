@@ -1,11 +1,14 @@
 package org.example.list;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-// TransactionController.java
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -48,7 +51,7 @@ public class TransactionController {
     private void loadData() {
         try {
             data.clear();
-            data.addAll(loader.loadTransactions("transactions.csv"));
+            data.addAll(loader.loadTransactions(view.getCurrentUsername()+"_transactions.csv",view.getCurrentUsername()));
             view.updateTable(data);
         } catch (IOException ex) {
             showError("File Load Error", ex.getMessage());
@@ -62,7 +65,8 @@ public class TransactionController {
      */
     private void saveChanges() {
         try {
-            saveTransactionsToCSV(data, "transactions.csv");
+            String path = view.getCurrentUsername() + "_transactions.csv";
+            saveTransactionsToCSV(data, path);
             showSuccess("Changes Saved", "All changes have been successfully saved to the transactions file.");
         } catch (IOException ex) {
             showError("Save Error", "Failed to save changes: " + ex.getMessage());
@@ -83,7 +87,7 @@ public class TransactionController {
                 new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
 
             // 写入标题行
-            writer.write("User,Source,Date,Amount,Category,Description");
+            writer.write("Username,Date,Amount,Category,Description");
             writer.newLine();
 
             // 写入每条交易记录
@@ -93,10 +97,7 @@ public class TransactionController {
                 StringBuilder line = new StringBuilder();
 
                 // 添加用户
-                appendField(line, transaction.getUser(), true);
-
-                // 添加来源
-                appendField(line, transaction.getSource(), true);
+                appendField(line, transaction.getUsername(), true);
 
                 // 添加日期
                 appendField(line, transaction.getDate().format(dateFormatter), true);
@@ -150,8 +151,7 @@ public class TransactionController {
             if (filter.isEmpty())
                 return true;
 
-            return matchesField(transaction.getUser(), filter) ||
-                    matchesField(transaction.getSource(), filter) ||
+            return matchesField(transaction.getUsername(), filter) ||
                     matchesField(transaction.getCategory(), filter) ||
                     matchesField(transaction.getDescription(), filter) ||
                     matchesNumber(transaction.getAmount(), filter) ||

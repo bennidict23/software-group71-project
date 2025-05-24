@@ -10,10 +10,6 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import org.example.DashboardView;
-import org.example.User;
-import org.example.UserManager;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -40,8 +36,7 @@ public class BudgetSettingsView {
 
         // 定义预算类别及其对应的 getter 和 setter 方法
         String[] budgetCategories = {
-                "Housing", "Shopping", "Food & Dining", "Gifts & Donations",
-                "Transportation", "Entertainment", "Personal Care", "Healthcare"
+                "Transportation", "Shopping", "Other", "Entertainment"
         };
 
         Map<String, TextField> budgetFields = new HashMap<>();
@@ -79,6 +74,7 @@ public class BudgetSettingsView {
 
         // 创建返回仪表盘按钮
         Button backToDashboardButton = new Button("Back to Dashboard");
+        backToDashboardButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
         backToDashboardButton.setOnAction(e -> {
             DashboardView dashboardView = new DashboardView();
             try {
@@ -144,22 +140,14 @@ public class BudgetSettingsView {
 
     private double getBudgetValue(String category) {
         switch (category) {
-            case "Housing":
-                return currentUser.getHousingBudget();
-            case "Shopping":
-                return currentUser.getShoppingBudget();
-            case "Food & Dining":
-                return currentUser.getFoodDiningBudget();
-            case "Gifts & Donations":
-                return currentUser.getGiftsDonationsBudget();
             case "Transportation":
                 return currentUser.getTransportationBudget();
+            case "Shopping":
+                return currentUser.getShoppingBudget();
+            case "Other":
+                return currentUser.getOtherBudget();
             case "Entertainment":
                 return currentUser.getEntertainmentBudget();
-            case "Personal Care":
-                return currentUser.getPersonalCareBudget();
-            case "Healthcare":
-                return currentUser.getHealthcareBudget();
             default:
                 return 0.0;
         }
@@ -167,41 +155,25 @@ public class BudgetSettingsView {
 
     private void setBudgetValue(String category, double value) {
         switch (category) {
-            case "Housing":
-                currentUser.setHousingBudget(value);
+            case "Transportation":
+                currentUser.setTransportationBudget(value);
                 break;
             case "Shopping":
                 currentUser.setShoppingBudget(value);
                 break;
-            case "Food & Dining":
-                currentUser.setFoodDiningBudget(value);
-                break;
-            case "Gifts & Donations":
-                currentUser.setGiftsDonationsBudget(value);
-                break;
-            case "Transportation":
-                currentUser.setTransportationBudget(value);
+            case "Other":
+                currentUser.setOtherBudget(value);
                 break;
             case "Entertainment":
                 currentUser.setEntertainmentBudget(value);
                 break;
-            case "Personal Care":
-                currentUser.setPersonalCareBudget(value);
-                break;
-            case "Healthcare":
-                currentUser.setHealthcareBudget(value);
-                break;
         }
         // 更新月预算总额
         currentUser.setMonthlyBudget(
-                currentUser.getHousingBudget() +
+                currentUser.getTransportationBudget() +
                         currentUser.getShoppingBudget() +
-                        currentUser.getFoodDiningBudget() +
-                        currentUser.getGiftsDonationsBudget() +
-                        currentUser.getTransportationBudget() +
-                        currentUser.getEntertainmentBudget() +
-                        currentUser.getPersonalCareBudget() +
-                        currentUser.getHealthcareBudget());
+                        currentUser.getOtherBudget() +
+                        currentUser.getEntertainmentBudget());
     }
 
     private void showAlert(Alert.AlertType alertType, String title, String message) {

@@ -25,6 +25,21 @@
 <!--            <artifactId>javafx-fxml</artifactId>-->
 <!--            <version>17.0.2</version>-->
 <!--        </dependency>-->
+        <!-- JUnit 5 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.9.2</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- Mockito -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>4.11.0</version>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
         <groupId>org.jfree</groupId>
         <artifactId>jfreechart</artifactId>
@@ -51,4 +66,17 @@
             <version>1.0.3</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <configuration>
+                    <mainClass>org.example.LoginFrame</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

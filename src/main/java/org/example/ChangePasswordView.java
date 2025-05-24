@@ -46,16 +46,17 @@ public class ChangePasswordView extends Application {
         // 提交按钮
         Button btnSubmit = new Button("Submit");
 
+        // 登出按钮
+        Button btnLogout = new Button("Logout");
+        btnLogout.setOnAction(e -> logout());
+
         // 返回 Dashboard 按钮
         Button btnBackToDashboard = new Button("Back to Dashboard");
+        btnBackToDashboard.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
         btnBackToDashboard.setOnAction(e -> {
             primaryStage.close();
             showDashboard();
         });
-
-        // 登出按钮
-        Button btnLogout = new Button("Logout");
-        btnLogout.setOnAction(e -> logout());
 
         // 将组件添加到网格布局
         grid.add(userLabel, 0, 0);
@@ -64,14 +65,16 @@ public class ChangePasswordView extends Application {
         grid.add(newPassField, 1, 2);
         grid.add(confirmPassLabel, 0, 3);
         grid.add(confirmPassField, 1, 3);
-        grid.add(btnSubmit, 1, 4);
 
         // 按钮区域
-        HBox buttonBox = new HBox(10, btnBackToDashboard, btnLogout);
-        buttonBox.setAlignment(Pos.BOTTOM_CENTER);
+        HBox buttonBox = new HBox(10, btnSubmit, btnLogout);
+        buttonBox.setAlignment(Pos.CENTER); // 设置按钮水平居中对齐
 
         // 将按钮区域添加到网格布局
-        grid.add(buttonBox, 0, 5, 2, 1);
+        grid.add(buttonBox, 0, 4, 2, 1);
+
+        // 添加返回 Dashboard 按钮
+        grid.add(btnBackToDashboard, 1, 5);
 
         // 设置密码修改提交逻辑
         btnSubmit.setOnAction(e -> {

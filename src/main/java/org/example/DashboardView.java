@@ -1,5 +1,18 @@
 package org.example;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+import org.example.analysis.AnalysisView;
+import org.example.analysis.SpendingStructureChart;
+import org.example.dataImport.DataImportController;
+import org.example.list.TransactionViewer;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -9,22 +22,15 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.PieChart;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import org.example.analysis.SpendingStructureChart;
-import org.example.dataImport.DataImportController;
-import org.example.list.TransactionViewer;
-import org.example.analysis.AnalysisView;
-
-
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 public class DashboardView extends Application {
 
@@ -32,11 +38,6 @@ public class DashboardView extends Application {
     public static User currentUser;
     // 用户管理对象，用于处理用户相关操作
     private UserManager userManager = new UserManager();
-
-    // 界面中的一些组件，用于展示和操作用户信息
-    private Label passwordLabel;
-    private Label budgetLabel;
-    private Label goalLabel;
 
     // 页面选择下拉框，用于切换不同的功能页面
     private ComboBox<String> pageSelector;
@@ -167,9 +168,16 @@ public class DashboardView extends Application {
         // 减少导航栏内边距
         navigationBox.setPadding(new Insets(5));
 
+        //--------------导航栏 End---------------
         // 创建标题标签
         Label titleLabel = new Label("Dashboard");
         titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
+        ImageView userIcon = new ImageView(
+                getClass().getResource("/img/user.jpg").toExternalForm()
+        );
+        // 设置图片大小（可调）
+        userIcon.setFitWidth(60);
+        userIcon.setFitHeight(60);
 
         // 创建新的框
         VBox newBox = new VBox();
@@ -180,6 +188,17 @@ public class DashboardView extends Application {
         newBox.setPrefHeight(250);
         HBox.setHgrow(newBox, Priority.ALWAYS);
 
+        // 获取用户名与掩码密码
+        String username = currentUser != null ? currentUser.getUsername() : "N/A";
+        String password = currentUser != null ? currentUser.getPassword() : "";
+        String maskedPassword = password.replaceAll(".", "*");
+
+        Label userLabel = new Label("User: " + username);
+        Label passLabel = new Label("Password: " + maskedPassword);
+
+        userLabel.setStyle("-fx-font-size: 16px; -fx-padding: 8px;");
+        passLabel.setStyle("-fx-font-size: 16px; -fx-padding: 8px;");
+
         // 创建储蓄金额和剩余预算标签
         Label savedAmountLabel = new Label("Saved Amount: $" + (currentUser != null ? currentUser.getSavedAmount() : "N/A"));
         Label remainingBudgetLabel = new Label("Remaining Budget: $" + (currentUser != null ? calculateRemainingBudget(currentUser) : "N/A"));
@@ -188,8 +207,15 @@ public class DashboardView extends Application {
         savedAmountLabel.setStyle("-fx-font-size: 16px; -fx-padding: 10px;");
         remainingBudgetLabel.setStyle("-fx-font-size: 16px; -fx-padding: 10px;");
 
-        // 将标签添加到 newBox 中
-        newBox.getChildren().addAll(savedAmountLabel, remainingBudgetLabel);
+        // 将标签添加到 newBox 中（新增的用户名和密码label放最上面）
+        newBox.getChildren().addAll(
+                userIcon,
+                userLabel,
+                passLabel,
+                savedAmountLabel,
+                remainingBudgetLabel
+        );
+
 
         // 创建另一个 VBox
         VBox anotherBox = new VBox();
@@ -218,14 +244,17 @@ public class DashboardView extends Application {
         chartPane.setStyle("-fx-border-color: gray; -fx-border-radius: 5px; -fx-padding: 10px;");
 
         // 检查是否有交易记录，如果有则显示图表
-        try (BufferedReader br = new BufferedReader(new FileReader("transactions.csv"))) {
-            // 跳过表头
-            String line = br.readLine();
-            if ((line = br.readLine()) != null) {
-                importDone = true;
+        String transactionFile = currentUser != null ? currentUser.getUsername() + "_transactions.csv" : null;
+        if (transactionFile != null) {
+            try (BufferedReader br = new BufferedReader(new FileReader(transactionFile))) {
+                // 跳过表头
+                String line = br.readLine();
+                if ((line = br.readLine()) != null) {
+                    importDone = true;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
 
         chartPane.setVisible(importDone);
@@ -245,10 +274,14 @@ public class DashboardView extends Application {
 
         // 创建场景并设置到主舞台
         Scene scene = new Scene(mainLayout, 1000, 800);
+
         primaryStage.setScene(scene);
     }
 
     private PieChart createPieChart() {
+        if (currentUser == null) {
+            return new PieChart();
+        }
         // 创建 SpendingStructureChart 实例以获取数据
         SpendingStructureChart spendingStructureChart = new SpendingStructureChart(currentUser);
         // 加载数据
@@ -284,6 +317,9 @@ public class DashboardView extends Application {
     }
 
     private void updateChart() {
+        if (currentUser == null) {
+            return;
+        }
         // 调用 UserManager 的 checkTransactionsFile 方法检测文件变化
         userManager.checkTransactionsFile();
 
@@ -297,16 +333,18 @@ public class DashboardView extends Application {
             lineChart.getData().addAll(newChart.getData());
         });
     }
-
     /**
      * 更新 savedAmount 和 annualSavedAmount，并刷新界面显示。
      */
-    private void updateSavedAmounts() {
+    void updateSavedAmounts() {
+        if (currentUser == null) {
+            return;
+        }
         // 调用 UserManager 的 checkTransactionsFile 方法更新 savedAmount 和 annualSavedAmount
         userManager.checkTransactionsFile();
     }
 
-    private double calculateRemainingBudget(User user) {
+    double calculateRemainingBudget(User user) {
         if (user == null) {
             return 0.0;
         }
@@ -338,7 +376,7 @@ public class DashboardView extends Application {
      *
      * @param primaryStage 主舞台
      */
-    private void logout(Stage primaryStage) {
+    void logout(Stage primaryStage) {
         // 停止定时任务
         if (scheduler != null) {
             scheduler.shutdownNow();

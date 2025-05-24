@@ -3,8 +3,9 @@ package org.example.list;
 // TransactionLoader.java
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,11 +15,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TransactionLoader {
-    public List<Transaction> loadTransactions(String filePath) throws IOException {
+    private String username;
+    public List<Transaction> loadTransactions(String filePath, String currentUsername) throws IOException {
         List<Transaction> transactions = new ArrayList<>();
         File file = new File(filePath);
-
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+        this.username = currentUsername;
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)))  {
             String headerLine = br.readLine(); // Skip header
             System.out.println("Header: " + headerLine);
 
@@ -43,7 +45,6 @@ public class TransactionLoader {
                 else if (header.equals("description"))
                     descriptionIdx = i;
             }
-
             if (dateIdx == -1 || amountIdx == -1) {
                 throw new IOException("CSV文件必须包含Date和Amount列");
             }
@@ -63,7 +64,6 @@ public class TransactionLoader {
                     System.out.println("警告: 第" + lineCount + "行数据列数不足，已跳过");
                     continue;
                 }
-
                 try {
                     // 解析金额，正确处理负号
                     double amount;
@@ -111,7 +111,8 @@ public class TransactionLoader {
      * @param transaction 要删除的交易对象
      */
     public void deleteTransaction(Transaction transaction) throws IOException {
-        Path path = Paths.get("transactions.csv");
+        
+        Path path = Paths.get(this.username + "_transactions.csv");
 
         // 读取所有行
         List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);

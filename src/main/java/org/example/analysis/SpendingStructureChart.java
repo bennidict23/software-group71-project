@@ -32,7 +32,7 @@ import javafx.concurrent.Task;
  */
 public class SpendingStructureChart extends BorderPane {
 
-    private static final String TRANSACTION_FILE = "./transactions.csv";
+    private static final String TRANSACTION_FILE_PATTERN = "%s_transactions.csv";
     private final User currentUser;
     private final Map<String, Double> categoryTotals = new HashMap<>();
     private double totalSpending = 0.0;
@@ -156,25 +156,20 @@ public class SpendingStructureChart extends BorderPane {
         String period = periodSelector.getValue();
         LocalDate startDate = calculateHistoricalStartDate(period);
 
-        // 尝试多个可能的文件路径
-        File transactionFile = new File(TRANSACTION_FILE);
-        if (!transactionFile.exists()) {
-            // 尝试项目根目录
-            transactionFile = new File("transactions.csv");
-            if (!transactionFile.exists()) {
-                // 尝试categorized版本
-                transactionFile = new File("transactions_categorized.csv");
-                if (!transactionFile.exists()) {
-                    // 尝试从当前工作目录的根开始查找
-                    transactionFile = new File(System.getProperty("user.dir"), "transactions.csv");
-                }
-            }
-        }
+        // 使用基于用户名的文件名
+        String transactionFileName = String.format(TRANSACTION_FILE_PATTERN, currentUser.getUsername());
+        File transactionFile = new File(transactionFileName);
 
         System.out.println("交易文件路径: " + transactionFile.getAbsolutePath());
         System.out.println("文件是否存在: " + transactionFile.exists());
         System.out.println("当前用户: " + (currentUser != null ? currentUser.getUsername() : "null"));
         System.out.println("开始日期: " + startDate);
+
+        if (!transactionFile.exists()) {
+            System.err.println("交易文件不存在: " + transactionFile.getAbsolutePath());
+            showNoDataMessage();
+            return;
+        }
 
         try (BufferedReader reader = new BufferedReader(new FileReader(transactionFile))) {
             // 读取标题行
@@ -184,12 +179,12 @@ public class SpendingStructureChart extends BorderPane {
 
             // 解析标题获取列索引
             String[] headers = header.split(",");
-            int userIdx = -1, dateIdx = -1, amountIdx = -1, categoryIdx = -1, descriptionIdx = -1;
+            int userIdx = -1, dateIdx = -1, amountIdx = -1, categoryIdx = -1, descriptionIdx = -1, sourceIdx = -1;
 
             // 查找列索引
             for (int i = 0; i < headers.length; i++) {
                 String col = headers[i].trim().toLowerCase();
-                if (col.equals("user"))
+                if (col.equals("user") || col.equals("username"))
                     userIdx = i;
                 else if (col.equals("date"))
                     dateIdx = i;
@@ -199,6 +194,8 @@ public class SpendingStructureChart extends BorderPane {
                     categoryIdx = i;
                 else if (col.equals("description"))
                     descriptionIdx = i;
+                else if (col.equals("source"))
+                    sourceIdx = i;
             }
 
             // 验证必要的列是否存在
@@ -212,7 +209,8 @@ public class SpendingStructureChart extends BorderPane {
                     ", Date=" + dateIdx +
                     ", Amount=" + amountIdx +
                     ", Category=" + categoryIdx +
-                    ", Description=" + descriptionIdx);
+                    ", Description=" + descriptionIdx +
+                    ", Source=" + sourceIdx);
 
             String line;
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -260,11 +258,16 @@ public class SpendingStructureChart extends BorderPane {
                         category = "Uncategorized";
                     }
 
-                    System.out.println("发现交易: 日期=" + date + ", 类别=" + category + ", 金额=" + amount);
+                    // 获取来源（如果存在）
+                    String source = "";
+                    if (sourceIdx != -1 && sourceIdx < parts.length) {
+                        source = parts[sourceIdx].trim();
+                    }
 
-                    // 仅考虑支出（负数金额）
-                    if (amount < 0) {
-                        amount = Math.abs(amount); // 转为正数以便计算
+                    System.out.println("发现交易: 日期=" + date + ", 类别=" + category + ", 金额=" + amount + ", 来源=" + source);
+
+                    // 处理支出（正数金额）
+                    if (amount > 0) {
                         processedCount++;
 
                         // 累加到类别总计
