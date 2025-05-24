@@ -62,8 +62,7 @@ public class ConsumerTrendChart {
         String transactionFile = currentUser.getUsername() + "_transactions.csv";
 
         try (BufferedReader br = new BufferedReader(new FileReader(transactionFile))) {
-            // 跳过表头
-            String line = br.readLine();
+            String line;
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
                 if (parts.length < 7) continue; // 确保至少有7个字段
