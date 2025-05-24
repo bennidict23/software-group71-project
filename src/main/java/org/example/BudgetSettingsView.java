@@ -36,7 +36,7 @@ public class BudgetSettingsView {
 
         // 定义预算类别及其对应的 getter 和 setter 方法
         String[] budgetCategories = {
-                "Transportation", "Shopping", "Other", "Entertainment"
+                "Transportation", "Shopping", "Other", "Entertainment", "Annual Budget"
         };
 
         Map<String, TextField> budgetFields = new HashMap<>();
@@ -93,14 +93,26 @@ public class BudgetSettingsView {
             budgetFields.get(category).setText(String.valueOf(budgetValue));
 
             // 检查预算和支出
-            double monthlyExpenses = userManager.getMonthlyExpensesByCategory(currentUser, category);
-            if (budgetValue <= monthlyExpenses) {
-                warningFields.get(category).setText("Less than or equal to your current expenses!");
-                // 设置文本颜色为红色
-                warningFields.get(category).setStyle("-fx-text-fill: red;");
+            if (category.equals("Annual Budget")) {
+                double annualExpenses = userManager.getAnnualTotalExpenses(currentUser);
+                if (budgetValue <= annualExpenses) {
+                    warningFields.get(category).setText("Annual expenses exceed annual budget!");
+                    // 设置文本颜色为红色
+                    warningFields.get(category).setStyle("-fx-text-fill: red;");
+                } else {
+                    warningFields.get(category).setText("normal");
+                    warningFields.get(category).setStyle("-fx-text-fill: green;");
+                }
             } else {
-                warningFields.get(category).setText("normal");
-                warningFields.get(category).setStyle("-fx-text-fill: green;");
+                double monthlyExpenses = userManager.getMonthlyExpensesByCategory(currentUser, category);
+                if (budgetValue <= monthlyExpenses) {
+                    warningFields.get(category).setText("Less than or equal to your current expenses!");
+                    // 设置文本颜色为红色
+                    warningFields.get(category).setStyle("-fx-text-fill: red;");
+                } else {
+                    warningFields.get(category).setText("normal");
+                    warningFields.get(category).setStyle("-fx-text-fill: green;");
+                }
             }
         }
 
@@ -118,14 +130,26 @@ public class BudgetSettingsView {
                     userManager.saveUserSettings(currentUser);
 
                     // 再次检查预算和支出
-                    double monthlyExpenses = userManager.getMonthlyExpensesByCategory(currentUser, category);
-                    if (newBudget <= monthlyExpenses) {
-                        warningFields.get(category).setText("Less than or equal to your current expenses!");
-                        // 设置文本颜色为红色
-                        warningFields.get(category).setStyle("-fx-text-fill: red;");
+                    if (category.equals("Annual Budget")) {
+                        double annualExpenses = userManager.getAnnualTotalExpenses(currentUser);
+                        if (newBudget <= annualExpenses) {
+                            warningFields.get(category).setText("Annual expenses exceed annual budget!");
+                            // 设置文本颜色为红色
+                            warningFields.get(category).setStyle("-fx-text-fill: red;");
+                        } else {
+                            warningFields.get(category).setText("normal");
+                            warningFields.get(category).setStyle("-fx-text-fill: green;");
+                        }
                     } else {
-                        warningFields.get(category).setText("normal");
-                        warningFields.get(category).setStyle("-fx-text-fill: green;");
+                        double monthlyExpenses = userManager.getMonthlyExpensesByCategory(currentUser, category);
+                        if (newBudget <= monthlyExpenses) {
+                            warningFields.get(category).setText("Less than or equal to your current expenses!");
+                            // 设置文本颜色为红色
+                            warningFields.get(category).setStyle("-fx-text-fill: red;");
+                        } else {
+                            warningFields.get(category).setText("normal");
+                            warningFields.get(category).setStyle("-fx-text-fill: green;");
+                        }
                     }
                 } catch (NumberFormatException ex) {
                     showAlert(Alert.AlertType.ERROR, "Error", "Please enter a valid budget number.");
@@ -148,6 +172,8 @@ public class BudgetSettingsView {
                 return currentUser.getOtherBudget();
             case "Entertainment":
                 return currentUser.getEntertainmentBudget();
+            case "Annual Budget":
+                return currentUser.getAnnualBudget();
             default:
                 return 0.0;
         }
@@ -166,6 +192,9 @@ public class BudgetSettingsView {
                 break;
             case "Entertainment":
                 currentUser.setEntertainmentBudget(value);
+                break;
+            case "Annual Budget":
+                currentUser.setAnnualBudget(value);
                 break;
         }
         // 更新月预算总额
