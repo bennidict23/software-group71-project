@@ -1,5 +1,3 @@
----
-
 # Finance Management System
 
 ## Overview
