@@ -18,7 +18,7 @@ All user data is stored in local CSV files for simplicity.
 
 * **Java 17** or above
 * **JavaFX 17** (Make sure you have the JavaFX SDK installed)
-* **Maven** (optional, but recommended for managing dependencies)
+* **Maven** (recommended for managing dependencies)
 * Runs on **Windows**, **Mac**, or **Linux**
 
 ---
@@ -57,7 +57,7 @@ software-group71-project/
 │                   ├── GoalSettingsViewTest.java
 │                   ├── BudgetSettingsViewTest.java
 │                   ├── ChangePasswordViewTest.java
-│                   ├── TransactionViewerTest.java
+│                   ├── DashboardViewerTest.java
 ├── resources/
 │   └── img/
 |        └──user.img
