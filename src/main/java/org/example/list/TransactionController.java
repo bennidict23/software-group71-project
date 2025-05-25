@@ -87,7 +87,7 @@ public class TransactionController {
                 new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
 
             // 写入标题行
-            writer.write("Username,Date,Amount,Category,Description");
+            writer.write("id,username,source,date,amount,category,description");
             writer.newLine();
 
             // 写入每条交易记录
@@ -96,14 +96,20 @@ public class TransactionController {
             for (Transaction transaction : transactions) {
                 StringBuilder line = new StringBuilder();
 
+                // 添加ID
+                appendField(line, String.valueOf(transaction.getId()-1), true);
+
                 // 添加用户
-                appendField(line, transaction.getUsername(), true);
+                appendField(line, view.getCurrentUsername(), true);
+                
+                // 添加来源
+                appendField(line, transaction.getSource(), true);
 
                 // 添加日期
                 appendField(line, transaction.getDate().format(dateFormatter), true);
 
                 // 添加金额
-                appendField(line, String.valueOf(transaction.getAmount()), true);
+                appendField(line, String.format("%.2f", transaction.getAmount()), true);
 
                 // 添加分类
                 appendField(line, transaction.getCategory(), true);

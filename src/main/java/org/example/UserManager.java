@@ -1,15 +1,24 @@
 package org.example;
 
-import javafx.application.Platform;
-import javafx.scene.control.Alert;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import javafx.application.Platform;
+import javafx.scene.control.Alert;
 
 public class UserManager {
     private final String usersFile;
@@ -324,7 +333,7 @@ public class UserManager {
         } catch (FileNotFoundException e) {
             System.err.println("Transaction file not found: " + transactionFile + ". Please check the file path.");
         } catch (IOException e) {
-            System.err.println("Error reading transaction file: " + e.getMessage());
+            System.err.println("1 Error reading transaction file: " + e.getMessage());
         }
         return totalExpenses - totalIncome;
     }
@@ -359,7 +368,7 @@ public class UserManager {
         } catch (FileNotFoundException e) {
             System.err.println("Transaction file not found: " + transactionFile + ". Please check the file path.");
         } catch (IOException e) {
-            System.err.println("Error reading transaction file: " + e.getMessage());
+            System.err.println("2 Error reading transaction file: " + e.getMessage());
         }
         return totalExpenses - totalIncome;
     }
@@ -386,7 +395,7 @@ public class UserManager {
         try {
             lines = Files.readAllLines(file.toPath());
         } catch (IOException e) {
-            System.err.println("Error reading transaction file: " + e.getMessage());
+            System.err.println("3 Error reading transaction file: " + e.getMessage());
             return;
         }
 
@@ -560,7 +569,7 @@ public class UserManager {
         } catch (FileNotFoundException e) {
             System.err.println("Transaction file not found: " + transactionFile + ". Please check the file path.");
         } catch (IOException e) {
-            System.err.println("Error reading transaction file: " + e.getMessage());
+            System.err.println("4 Error reading transaction file: " + e.getMessage());
         }
         return totalExpenses - totalIncome;
     }
