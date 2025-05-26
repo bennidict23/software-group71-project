@@ -40,7 +40,6 @@ software-group71-project/
 │   │   │           ├── GoalSettingsView.java
 │   │   │           ├── BudgetSettingsView.java
 │   │   │           ├── ChangePasswordView.java
-│   │   │           ├── TransactionViewer.java
 │   │   │           ├── analysis/
 │   │   │           │   ├── AIModelService.java
 │   │   │           │   ├── AnalysisView.java
@@ -55,7 +54,8 @@ software-group71-project/
 │   │   │           │   ├── Transaction.java
 │   │   │           │   ├── TransactionController.java
 │   │   │           │   ├── TransactionLoader.java
-│   │   │           │   └── TransactionView.java
+│   │   │           │   ├── TransactionView.java
+│   │   │           │   └── TransactionViewer.java
 │   │   │           └── utils/
 │   │   │               ├── CategoryRulesManager.java
 │   │   │               ├── DeepSeekCategoryService.java
@@ -76,6 +76,7 @@ software-group71-project/
 │                   ├── UserTest.java
 │                   ├── UserManagerTest.java
 │                   ├── GoalSettingsViewTest.java
+│                   ├── ChangePasswordViewTest
 │                   └── BudgetSettingsViewTest.java
 ├── users.csv
 ├── user_settings.csv
