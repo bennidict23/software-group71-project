@@ -57,7 +57,7 @@ software-group71-project/
 │                   ├── GoalSettingsViewTest.java
 │                   ├── BudgetSettingsViewTest.java
 │                   ├── ChangePasswordViewTest.java
-│                   ├── DashboardViewerTest.java
+│                  
 ├── resources/
 │   └── img/
 |        └──user.img
