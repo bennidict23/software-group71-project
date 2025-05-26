@@ -143,7 +143,7 @@ public class TransactionView {
                     try {
                         new TransactionLoader().deleteTransaction(transaction);
                     } catch (IOException ex) {
-                        new Alert(Alert.AlertType.ERROR, "Failed to delete file: " + ex.getMessage()).show();
+                        // new Alert(Alert.AlertType.ERROR, "Failed to delete file: " + ex.getMessage()).show();
                     }
                 });
             }
