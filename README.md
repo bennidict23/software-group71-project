@@ -6,7 +6,7 @@ This is a personal finance management system implemented in Java using JavaFX fo
 
 * Register, login, and manage accounts
 * Set and view saving goals and budgets
-* Record, import, and analyze transactions
+* Record, import(from csv files downloaded from Wechat, Alipay or template csv we provided), and analyze transactions
 * View spending statistics in charts (pie and line chart)
 * Reset and change passwords
 
@@ -29,22 +29,43 @@ All user data is stored in local CSV files for simplicity.
 software-group71-project/
 ├── src/
 │   ├── main/
-│   │   └── java/
-│   │       └── org/
-│   │           └── example/
-│   │               ├── DashboardView.java
-│   │               ├── LoginFrame.java
-│   │               ├── RegisterFrame.java
-│   │               ├── User.java
-│   │               ├── UserManager.java
-│   │               ├── GoalSettingsView.java
-│   │               ├── BudgetSettingsView.java
-│   │               ├── ChangePasswordView.java
-│   │               ├── TransactionViewer.java
-│   │               ├── analysis/
-│   │               │   ├── AnalysisView.java
-│   │               │   └── SpendingStructureChart.java
-│   │               └── ... (other classes)
+│   │   ├── java/
+│   │   │   └── org/
+│   │   │       └── example/
+│   │   │           ├── DashboardView.java
+│   │   │           ├── LoginFrame.java
+│   │   │           ├── RegisterFrame.java
+│   │   │           ├── User.java
+│   │   │           ├── UserManager.java
+│   │   │           ├── GoalSettingsView.java
+│   │   │           ├── BudgetSettingsView.java
+│   │   │           ├── ChangePasswordView.java
+│   │   │           ├── TransactionViewer.java
+│   │   │           ├── analysis/
+│   │   │           │   ├── AIModelService.java
+│   │   │           │   ├── AnalysisView.java
+│   │   │           │   ├── BudgetRecommendationView.java
+│   │   │           │   ├── SpendingForecastView.java
+│   │   │           │   └── SpendingStructureChart.java
+│   │   │           ├── dataimport/
+│   │   │           │   ├── DataImportController.java
+│   │   │           │   ├── DataImportModel.java
+│   │   │           │   └── DataImportView.java
+│   │   │           ├── list/
+│   │   │           │   ├── Transaction.java
+│   │   │           │   ├── TransactionController.java
+│   │   │           │   ├── TransactionLoader.java
+│   │   │           │   └── TransactionView.java
+│   │   │           └── utils/
+│   │   │               ├── CategoryRulesManager.java
+│   │   │               ├── DeepSeekCategoryService.java
+│   │   │               ├── LoadingUtils.java
+│   │   │               ├── UIUtils.java
+│   │   │               └── ConsumerTrendChart.java
+│   │   └── resources/
+│   │       ├── img/
+│   │       │   └── user.img
+│   │       └── <username>_transactions.csv
 │   └── test/
 │       └── java/
 │           └── org/
@@ -57,14 +78,16 @@ software-group71-project/
 │                   ├── GoalSettingsViewTest.java
 │                   ├── BudgetSettingsViewTest.java
 │                   ├── ChangePasswordViewTest.java
-│                  
-├── resources/
-│   └── img/
-|        └──user.img
+│                   ├── analysis/
+│                   │   ├── AIModelServiceTest.java
+│                   │   └── SpendingStructureChartTest.java
+│                   ├── dataimport/
+│                   │   └── DataImportControllerTest.java
+│                   └── list/
+│                       └── TransactionTest.java
 ├── users.csv
 ├── user_settings.csv
-├──pom.xml
-├── <username>_transactions.csv
+├── pom.xml
 └── README.md
 
 ```
