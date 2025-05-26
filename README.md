@@ -63,9 +63,9 @@ software-group71-project/
 │   │   │               ├── UIUtils.java
 │   │   │               └── ConsumerTrendChart.java
 │   │   └── resources/
-│   │       ├── img/
-│   │       │   └── user.img
-│   │       └── <username>_transactions.csv
+│   │       └── img/
+│   │            └── user.img
+│   │       
 │   └── test/
 │       └── java/
 │           └── org/
@@ -76,18 +76,11 @@ software-group71-project/
 │                   ├── UserTest.java
 │                   ├── UserManagerTest.java
 │                   ├── GoalSettingsViewTest.java
-│                   ├── BudgetSettingsViewTest.java
-│                   ├── ChangePasswordViewTest.java
-│                   ├── analysis/
-│                   │   ├── AIModelServiceTest.java
-│                   │   └── SpendingStructureChartTest.java
-│                   ├── dataimport/
-│                   │   └── DataImportControllerTest.java
-│                   └── list/
-│                       └── TransactionTest.java
+│                   └── BudgetSettingsViewTest.java
 ├── users.csv
 ├── user_settings.csv
 ├── pom.xml
+├── <username>_transactions.csv
 └── README.md
 
 ```
